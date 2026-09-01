@@ -67,8 +67,6 @@ section .bss
     previous_second resb 1
 
 
-    
-
 ; ==============================================================================
 ; SECCIÓN DE CÓDIGO
 ; ==============================================================================
@@ -223,10 +221,10 @@ main_loop:
     ; CRONÓMETRO - INICIAR / PAUSAR
     ; ==========================================================
 
-    cmp ax, 'R'
+    cmp ax, 'I'
     je chrono_start_pause
 
-    cmp ax, 'r'
+    cmp ax, 'i'
     je chrono_start_pause
 
 
@@ -240,8 +238,44 @@ main_loop:
     cmp ax, 'c'
     je chrono_reset
 
-
 .skip_chrono_controls:
+
+    ; ==========================================================
+    ; ALARMA
+    ; ==========================================================
+
+    ; Solo permitir estos comandos en modo ALARMA
+    cmp byte [current_mode], 2
+    jne .skip_alarm_controls
+
+
+    ; ==========================================================
+    ; ALARMA - Configurar alarma
+    ; ==========================================================
+
+    cmp ax, 'S'
+    
+    cmp ax, 's'
+
+    ; ==========================================================
+    ; ALARMA - Cancelar alarma
+    ; ==========================================================
+
+    cmp ax, 'C'
+
+    cmp ax, 'c'
+
+
+    ; ==========================================================
+    ; ALARMA - Apagar alarma
+    ; ==========================================================
+
+    cmp ax, 'A'
+
+    cmp ax, 'a'
+
+
+.skip_alarm_controls:
 
     jmp main_loop
 
@@ -260,18 +294,13 @@ change_mode:
 
 .save_mode:
     mov [current_mode], al
-
     call render_ui
-
     jmp main_loop
-
-
 
 
 ; ------------------------------------------------------------------------------
 ; FUNCIÓN: chrono_start_pause
 ; ------------------------------------------------------------------------------
-
 chrono_start_pause:
 
     cmp byte [chrono_running], 1
@@ -292,7 +321,6 @@ chrono_start_pause:
 ; ------------------------------------------------------------------------------
 ; FUNCIÓN: chrono_reset
 ; ------------------------------------------------------------------------------
-
 chrono_reset:
 
     call reset_chronometer

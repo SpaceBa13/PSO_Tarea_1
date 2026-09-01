@@ -9,6 +9,8 @@ global print_string
 global clear_screen
 global render_ui
 
+
+
 ; ==============================================================================
 ; VARIABLES Y FUNCIONES EXTERNAS
 ; ==============================================================================
@@ -64,8 +66,8 @@ section .data
     msg_chrono_bottom dw __utf16__(`\r\n              +---------------------------+\r\n\r\n`), 0
 
     msg_chrono_controls dw __utf16__(`+-------------------------------------------------------+\r\n`), \
-                           __utf16__(`| [R] Iniciar/Pausar | [C] Reiniciar | [M] Cambiar Modo |\r\n`), \
-                           __utf16__(`| [ESC/Q] Salir                                       |\r\n`), \
+                           __utf16__(`| [I] Iniciar/Pausar | [C] Reiniciar | [M] Cambiar Modo |\r\n`), \
+                           __utf16__(`| [ESC/Q] Salir                                         |\r\n`), \
                            __utf16__(`+-------------------------------------------------------+\r\n`), 0
 
 
@@ -85,7 +87,16 @@ section .data
                     __utf16__(`| [C] Cancel Alarma| [ESC/Q] Salir                       |\r\n`), \
                     __utf16__(`+-------------------------------------------------------+\r\n`), 0
 
+    msg_alarm_controls dw   __utf16__(`+-------------------------------------------------------+\r\n`), \
+                            __utf16__(`| [M] Cambiar Modo  | [S] Config. Alarma | [A] Apagar   |\r\n`), \
+                            __utf16__(`| [C] Cancel Alarma | [ESC/Q] Salir                     |\r\n`), \
+                            __utf16__(`+-------------------------------------------------------+\r\n`), 0
+
+
     msg_colon dw __utf16__(`:`), 0
+
+    COLOR_NORMAL   equ 0x07
+    COLOR_SELECTED equ 0x0E
 
 
 ; ==============================================================================
@@ -265,7 +276,7 @@ render_ui:
     lea rcx, [msg_alarm]
     call print_string
 
-    lea rcx, [msg_controls]
+    lea rcx, [msg_alarm_controls]
     call print_string
 
     jmp .done
@@ -281,41 +292,23 @@ render_ui:
     ret
 
 
-; ==============================================================
-; ELEMENTOS COMUNES
-; ==============================================================
+; ------------------------------------------------------------------------------
+; FUNCIÓN: set_color
+;
+; RCX = atributo de color
+;
+; Utiliza:
+;     ConOut->SetAttribute
+; ------------------------------------------------------------------------------
 
-.display:
+set_color:
+    sub rsp, 40
 
-    ; ----------------------------------------------------------
-    ; Mostrar hora actual
-    ; ----------------------------------------------------------
+    mov rdx, rcx
+    mov rcx, [ConOut]
 
-    lea rcx, [msg_display_top]
-    call print_string
-
-    lea rcx, [ClockString]
-    call print_string
-
-    lea rcx, [msg_display_bottom]
-    call print_string
-
-
-.display_alarm:
-
-    ; ----------------------------------------------------------
-    ; Mostrar alarma
-    ; ----------------------------------------------------------
-
-    lea rcx, [msg_alarm]
-    call print_string
-
-    ; ----------------------------------------------------------
-    ; Mostrar controles
-    ; ----------------------------------------------------------
-
-    lea rcx, [msg_controls]
-    call print_string
+    mov rax, [rcx + 0x20]       ; SetAttribute
+    call rax
 
     add rsp, 40
     ret
