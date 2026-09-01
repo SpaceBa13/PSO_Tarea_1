@@ -232,10 +232,10 @@ main_loop:
     ; CRONÓMETRO - REINICIAR
     ; ==========================================================
 
-    cmp ax, 'C'
+    cmp ax, 'R'
     je chrono_reset
 
-    cmp ax, 'c'
+    cmp ax, 'r'
     je chrono_reset
 
 .skip_chrono_controls:
