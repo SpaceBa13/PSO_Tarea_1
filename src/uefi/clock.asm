@@ -330,6 +330,70 @@ update_chrono_string:
 
 
 ; ------------------------------------------------------------------------------
+; FUNCIÓN: pause_chronometer
+;
+; Guarda el tiempo actual del cronómetro para poder reanudar posteriormente.
+; ------------------------------------------------------------------------------
+
+pause_chronometer:
+    sub rsp, 40
+
+    ; ----------------------------------------------------------
+    ; Comprobar si está corriendo
+    ; ----------------------------------------------------------
+
+    cmp byte [chrono_running], 1
+    jne .done
+
+    ; ----------------------------------------------------------
+    ; Actualizar una última vez antes de pausar
+    ; ----------------------------------------------------------
+
+    call update_chronometer
+
+    ; ----------------------------------------------------------
+    ; Guardar tiempo acumulado
+    ; ----------------------------------------------------------
+
+    mov al, [chrono_hour]
+    mov [chrono_elapsed_hour], al
+
+    mov al, [chrono_minute]
+    mov [chrono_elapsed_minute], al
+
+    mov al, [chrono_second]
+    mov [chrono_elapsed_second], al
+
+    ; ----------------------------------------------------------
+    ; Detener cronómetro
+    ; ----------------------------------------------------------
+
+    mov byte [chrono_running], 0
+
+.done:
+    add rsp, 40
+    ret
+
+; ------------------------------------------------------------------------------
+; FUNCIÓN: reset_chronometer
+; ------------------------------------------------------------------------------
+
+reset_chronometer:
+
+    mov byte [chrono_running], 0
+    mov byte [chrono_started], 0
+
+    mov byte [chrono_hour], 0
+    mov byte [chrono_minute], 0
+    mov byte [chrono_second], 0
+
+    mov byte [chrono_elapsed_hour], 0
+    mov byte [chrono_elapsed_minute], 0
+    mov byte [chrono_elapsed_second], 0
+
+    ret
+
+; ------------------------------------------------------------------------------
 ; FUNCIÓN: start_chronometer
 ;
 ; Inicia o reanuda el cronómetro.

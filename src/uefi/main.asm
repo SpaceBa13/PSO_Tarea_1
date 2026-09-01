@@ -210,6 +210,38 @@ main_loop:
     cmp ax, 'm'
     je change_mode
 
+    ; ==========================================================
+    ; CRONÓMETRO
+    ; ==========================================================
+
+    ; Solo permitir estos comandos en modo CRONÓMETRO
+    cmp byte [current_mode], 1
+    jne .skip_chrono_controls
+
+
+    ; ==========================================================
+    ; CRONÓMETRO - INICIAR / PAUSAR
+    ; ==========================================================
+
+    cmp ax, 'R'
+    je chrono_start_pause
+
+    cmp ax, 'r'
+    je chrono_start_pause
+
+
+    ; ==========================================================
+    ; CRONÓMETRO - REINICIAR
+    ; ==========================================================
+
+    cmp ax, 'C'
+    je chrono_reset
+
+    cmp ax, 'c'
+    je chrono_reset
+
+
+.skip_chrono_controls:
 
     jmp main_loop
 
@@ -228,6 +260,43 @@ change_mode:
 
 .save_mode:
     mov [current_mode], al
+
+    call render_ui
+
+    jmp main_loop
+
+
+
+
+; ------------------------------------------------------------------------------
+; FUNCIÓN: chrono_start_pause
+; ------------------------------------------------------------------------------
+
+chrono_start_pause:
+
+    cmp byte [chrono_running], 1
+    je .pause
+
+    call start_chronometer
+
+    jmp main_loop
+
+
+.pause:
+
+    call pause_chronometer
+
+    jmp main_loop
+
+
+; ------------------------------------------------------------------------------
+; FUNCIÓN: chrono_reset
+; ------------------------------------------------------------------------------
+
+chrono_reset:
+
+    call reset_chronometer
+    call update_chrono_string
 
     call render_ui
 
