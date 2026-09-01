@@ -23,7 +23,7 @@ uefi:
 	x86_64-w64-mingw32-ld -e efi_main -subsystem 10 -o $(BUILD_DIR)/esp/EFI/BOOT/BOOTX64.EFI $(BUILD_DIR)/boot.obj $(BUILD_DIR)/main.obj
 
 run-uefi: uefi
-	env -u LD_LIBRARY_PATH qemu-system-x86_64 -bios /usr/share/ovmf/OVMF.fd -net none -drive format=raw,file=fat:rw:$(BUILD_DIR)/esp
-    
+	env -u LD_LIBRARY_PATH qemu-system-x86_64 -bios /usr/share/ovmf/OVMF.fd -net none -rtc base=localtime -drive format=raw,file=fat:rw:$(BUILD_DIR)/esp
+	
 clean:
 	rm -rf $(BUILD_DIR)
