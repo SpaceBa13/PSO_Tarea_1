@@ -18,7 +18,23 @@ global current_mode
 extern print_string
 extern clear_screen
 extern render_ui
+extern chrono_started
+extern chrono_running
+extern last_second
 
+
+extern update_chronometer
+extern update_chrono_string
+
+extern chrono_hour
+extern chrono_minute
+extern chrono_second
+
+extern start_chronometer
+extern pause_chronometer
+extern reset_chronometer
+
+extern chrono_running
 
 ; ==============================================================================
 ; SECCIÓN DE DATOS INICIALIZADOS
@@ -49,6 +65,8 @@ section .bss
     current_mode resb 1
 
     previous_second resb 1
+
+
     
 
 ; ==============================================================================
@@ -69,6 +87,18 @@ main_app:
 
     mov byte [current_mode], 0
 
+    mov byte [previous_second], 255
+
+    mov byte [chrono_running], 0
+    mov byte [chrono_started], 0
+
+    mov byte [chrono_hour], 0
+    mov byte [chrono_minute], 0
+    mov byte [chrono_second], 0
+
+    call update_chrono_string
+
+
     ; 2. Esperar confirmación del usuario (Aceptar cualquier tecla)
 .wait_confirm:
     mov rcx, [ConIn]
@@ -82,31 +112,57 @@ main_app:
     ; 3. Renderizar la interfaz visual interactiva
     call render_ui
     
+
 ; ------------------------------------------------------------------------------
 ; BUCLE PRINCIPAL
 ; ------------------------------------------------------------------------------
 main_loop:
 
     ; ==========================================================
-    ; 1. ACTUALIZAR HORA
+    ; OBTENER HORA ACTUAL
     ; ==========================================================
 
     call get_time
 
+    ; ==========================================================
+    ; COMPROBAR SI CAMBIÓ EL SEGUNDO
+    ; ==========================================================
+
     mov al, [current_second]
 
-    ; ¿Cambió el segundo?
     cmp al, [previous_second]
     je .check_keyboard
 
+    ; ----------------------------------------------------------
     ; Guardar nuevo segundo
+    ; ----------------------------------------------------------
+
     mov [previous_second], al
 
-    ; Actualizar cadena HH:MM:SS
+    ; ----------------------------------------------------------
+    ; Actualizar reloj
+    ; ----------------------------------------------------------
+
     call update_clock_string
 
-    ; Redibujar interfaz
+    ; ----------------------------------------------------------
+    ; Actualizar cronómetro si está corriendo
+    ; ----------------------------------------------------------
+
+    cmp byte [chrono_running], 1
+    jne .no_chronometer
+
+    call update_chronometer
+    call update_chrono_string
+
+.no_chronometer:
+
+    ; ----------------------------------------------------------
+    ; Actualizar interfaz
+    ; ----------------------------------------------------------
+
     call render_ui
+
 
 
 .check_keyboard:

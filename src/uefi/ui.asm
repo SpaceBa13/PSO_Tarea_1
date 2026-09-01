@@ -17,9 +17,11 @@ extern ConOut
 extern current_mode
 
 extern get_time
-extern update_clock_string
-extern ClockString
 
+
+
+extern ClockString
+extern ChronoString
 
 ; ==============================================================================
 ; SECCIÓN DE DATOS INICIALIZADOS
@@ -38,20 +40,52 @@ section .data
                         __utf16__(`|       SISTEMA DE TIEMPO REAL - MODO ALARMA            |\r\n`), \
                         __utf16__(`+-------------------------------------------------------+\r\n\r\n`), 0
 
+
+    ; ==========================================================
+    ; RELOJ
+    ; ==========================================================
+
     msg_display_top dw __utf16__(`              +---------------------------+\r\n`), \
-                   __utf16__(`              |  HORA ACTUAL:  `), 0
+                       __utf16__(`              |  HORA ACTUAL:  `), 0
 
     msg_display_bottom dw __utf16__(`   |\r\n`), \
-                        __utf16__(`              +---------------------------+\r\n\r\n`), 0
+                           __utf16__(`              +---------------------------+\r\n\r\n`), 0
 
-    msg_alarm   dw __utf16__(`  [ Alarma: DESACTIVADA ( --:-- ) ]\r\n\r\n`), 0
+
+    ; ==========================================================
+    ; CRONÓMETRO
+    ; ==========================================================
+
+    msg_chrono_top dw __utf16__(`              +---------------------------+\r\n`), \
+                      __utf16__(`              |  HORA ACTUAL:  `), 0
+
+    msg_chrono_middle dw __utf16__(`\r\n              |  CRONOMETRO:    `), 0
+
+    msg_chrono_bottom dw __utf16__(`\r\n              +---------------------------+\r\n\r\n`), 0
+
+    msg_chrono_controls dw __utf16__(`+-------------------------------------------------------+\r\n`), \
+                           __utf16__(`| [R] Iniciar/Pausar | [C] Reiniciar | [M] Cambiar Modo |\r\n`), \
+                           __utf16__(`| [ESC/Q] Salir                                       |\r\n`), \
+                           __utf16__(`+-------------------------------------------------------+\r\n`), 0
+
+
+    ; ==========================================================
+    ; ALARMA
+    ; ==========================================================
+
+    msg_alarm dw __utf16__(`  [ Alarma: DESACTIVADA ( --:-- ) ]\r\n\r\n`), 0
+
+
+    ; ==========================================================
+    ; CONTROLES GENERALES
+    ; ==========================================================
 
     msg_controls dw __utf16__(`+-------------------------------------------------------+\r\n`), \
                     __utf16__(`| [M] Cambiar Modo | [R] Reiniciar | [A] Config. Alarma |\r\n`), \
                     __utf16__(`| [C] Cancel Alarma| [ESC/Q] Salir                       |\r\n`), \
                     __utf16__(`+-------------------------------------------------------+\r\n`), 0
-    msg_colon dw __utf16__(`:`), 0
 
+    msg_colon dw __utf16__(`:`), 0
 
 
 ; ==============================================================================
@@ -125,7 +159,7 @@ render_ui:
     call clear_screen
 
     ; ----------------------------------------------------------
-    ; Mostrar encabezado según el modo
+    ; Seleccionar modo
     ; ----------------------------------------------------------
 
     mov al, [current_mode]
@@ -139,28 +173,117 @@ render_ui:
     cmp al, 2
     je .alarm_mode
 
+    jmp .done
+
+
+; ==============================================================
+; MODO RELOJ
+; ==============================================================
 
 .clock_mode:
 
     lea rcx, [msg_header_clock]
     call print_string
 
-    jmp .display
+    ; ----------------------------------------------------------
+    ; Hora actual
+    ; ----------------------------------------------------------
 
+    lea rcx, [msg_display_top]
+    call print_string
+
+    lea rcx, [ClockString]
+    call print_string
+
+    lea rcx, [msg_display_bottom]
+    call print_string
+
+    ; ----------------------------------------------------------
+    ; Controles
+    ; ----------------------------------------------------------
+
+    lea rcx, [msg_controls]
+    call print_string
+
+    jmp .done
+
+
+; ==============================================================
+; MODO CRONÓMETRO
+; ==============================================================
 
 .chrono_mode:
 
     lea rcx, [msg_header_chrono]
     call print_string
 
-    jmp .display
+    ; ----------------------------------------------------------
+    ; Hora actual
+    ; ----------------------------------------------------------
 
+    lea rcx, [msg_chrono_top]
+    call print_string
+
+    lea rcx, [ClockString]
+    call print_string
+
+    ; ----------------------------------------------------------
+    ; Cronómetro
+    ; ----------------------------------------------------------
+
+    lea rcx, [msg_chrono_middle]
+    call print_string
+
+    lea rcx, [ChronoString]
+    call print_string
+
+    lea rcx, [msg_chrono_bottom]
+    call print_string
+
+    ; ----------------------------------------------------------
+    ; Controles del cronómetro
+    ; ----------------------------------------------------------
+
+    lea rcx, [msg_chrono_controls]
+    call print_string
+
+    jmp .done
+
+
+; ==============================================================
+; MODO ALARMA
+; ==============================================================
 
 .alarm_mode:
 
     lea rcx, [msg_header_alarm]
     call print_string
 
+    ; Aquí agregaremos posteriormente
+    ; la interfaz de la alarma.
+
+    lea rcx, [msg_alarm]
+    call print_string
+
+    lea rcx, [msg_controls]
+    call print_string
+
+    jmp .done
+
+
+; ==============================================================
+; FIN
+; ==============================================================
+
+.done:
+
+    add rsp, 40
+    ret
+
+
+; ==============================================================
+; ELEMENTOS COMUNES
+; ==============================================================
 
 .display:
 
@@ -171,14 +294,14 @@ render_ui:
     lea rcx, [msg_display_top]
     call print_string
 
-    call get_time
-    call update_clock_string
-
     lea rcx, [ClockString]
     call print_string
 
     lea rcx, [msg_display_bottom]
     call print_string
+
+
+.display_alarm:
 
     ; ----------------------------------------------------------
     ; Mostrar alarma
