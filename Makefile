@@ -2,6 +2,8 @@
 SRC_LEGACY = src/legacy/main.asm
 SRC_UEFI_BOOT = src/uefi/boot.asm
 SRC_UEFI_MAIN = src/uefi/main.asm
+SRC_UEFI_CLOCK = src/uefi/clock.asm
+SRC_UEFI_UI = src/uefi/ui.asm
 BUILD_DIR = build
 
 # Regla por defecto: Compilar ambos
@@ -19,11 +21,22 @@ run-legacy: legacy
 uefi:
 	mkdir -p $(BUILD_DIR)/esp/EFI/BOOT
 	nasm -f win64 $(SRC_UEFI_BOOT) -o $(BUILD_DIR)/boot.obj
+	nasm -f win64 $(SRC_UEFI_CLOCK) -o $(BUILD_DIR)/clock.obj
+	nasm -f win64 $(SRC_UEFI_UI) -o $(BUILD_DIR)/ui.obj
 	nasm -f win64 $(SRC_UEFI_MAIN) -o $(BUILD_DIR)/main.obj
-	x86_64-w64-mingw32-ld -e efi_main -subsystem 10 -o $(BUILD_DIR)/esp/EFI/BOOT/BOOTX64.EFI $(BUILD_DIR)/boot.obj $(BUILD_DIR)/main.obj
+	x86_64-w64-mingw32-ld -e efi_main -subsystem 10 -o $(BUILD_DIR)/esp/EFI/BOOT/BOOTX64.EFI \
+		$(BUILD_DIR)/boot.obj \
+		$(BUILD_DIR)/clock.obj \
+		$(BUILD_DIR)/ui.obj \
+		$(BUILD_DIR)/main.obj \
 
 run-uefi: uefi
-	env -u LD_LIBRARY_PATH qemu-system-x86_64 -bios /usr/share/ovmf/OVMF.fd -net none -rtc base=localtime -drive format=raw,file=fat:rw:$(BUILD_DIR)/esp
-	
+	env -u LD_LIBRARY_PATH qemu-system-x86_64 \
+		-bios /usr/share/ovmf/OVMF.fd \
+		-net none \
+		-rtc base=localtime \
+		-drive format=raw,file=fat:rw:$(BUILD_DIR)/esp
+
+
 clean:
 	rm -rf $(BUILD_DIR)
