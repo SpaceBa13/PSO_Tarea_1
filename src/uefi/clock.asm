@@ -8,6 +8,7 @@ default rel
 global get_time
 global update_clock_string
 global ClockString
+global current_second
 
 ; ==============================================================================
 ; VARIABLES EXTERNAS

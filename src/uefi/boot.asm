@@ -22,6 +22,7 @@ efi_main:
 
     ; 3. Extraer punteros desde la EFI_SYSTEM_TABLE
     mov r8, [SystemTable]
+
     
     ; ConOut está en el offset 0x40
     mov r9, [r8 + 0x40]
@@ -30,6 +31,7 @@ efi_main:
     ; ConIn está en el offset 0x30
     mov r9, [r8 + 0x30]
     mov [ConIn], r9
+
 
     ; 4. Llamar a la lógica principal de la aplicación
     call main_app

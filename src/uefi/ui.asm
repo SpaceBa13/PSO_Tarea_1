@@ -16,18 +16,43 @@ global render_ui
 extern ConOut
 extern current_mode
 
-extern msg_header_clock
-extern msg_header_chrono
-extern msg_header_alarm
-
-extern msg_display_top
-extern msg_display_bottom
-extern msg_alarm
-extern msg_controls
-
 extern get_time
 extern update_clock_string
 extern ClockString
+
+
+; ==============================================================================
+; SECCIÓN DE DATOS INICIALIZADOS
+; ==============================================================================
+section .data
+
+    msg_header_clock dw __utf16__(`+-------------------------------------------------------+\r\n`), \
+                        __utf16__(`|       SISTEMA DE TIEMPO REAL - MODO RELOJ             |\r\n`), \
+                        __utf16__(`+-------------------------------------------------------+\r\n\r\n`), 0
+
+    msg_header_chrono dw __utf16__(`+-------------------------------------------------------+\r\n`), \
+                         __utf16__(`|    SISTEMA DE TIEMPO REAL - MODO CRONOMETRO          |\r\n`), \
+                         __utf16__(`+-------------------------------------------------------+\r\n\r\n`), 0
+
+    msg_header_alarm dw __utf16__(`+-------------------------------------------------------+\r\n`), \
+                        __utf16__(`|       SISTEMA DE TIEMPO REAL - MODO ALARMA            |\r\n`), \
+                        __utf16__(`+-------------------------------------------------------+\r\n\r\n`), 0
+
+    msg_display_top dw __utf16__(`              +---------------------------+\r\n`), \
+                   __utf16__(`              |  HORA ACTUAL:  `), 0
+
+    msg_display_bottom dw __utf16__(`   |\r\n`), \
+                        __utf16__(`              +---------------------------+\r\n\r\n`), 0
+
+    msg_alarm   dw __utf16__(`  [ Alarma: DESACTIVADA ( --:-- ) ]\r\n\r\n`), 0
+
+    msg_controls dw __utf16__(`+-------------------------------------------------------+\r\n`), \
+                    __utf16__(`| [M] Cambiar Modo | [R] Reiniciar | [A] Config. Alarma |\r\n`), \
+                    __utf16__(`| [C] Cancel Alarma| [ESC/Q] Salir                       |\r\n`), \
+                    __utf16__(`+-------------------------------------------------------+\r\n`), 0
+    msg_colon dw __utf16__(`:`), 0
+
+
 
 ; ==============================================================================
 ; SECCIÓN DE CÓDIGO
@@ -78,7 +103,6 @@ clear_screen:
     add rsp, 40
     ret
 
-
 ; ------------------------------------------------------------------------------
 ; FUNCIÓN: render_ui
 ;
@@ -114,6 +138,7 @@ render_ui:
 
     cmp al, 2
     je .alarm_mode
+
 
 .clock_mode:
 

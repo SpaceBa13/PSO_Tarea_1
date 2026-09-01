@@ -11,6 +11,7 @@ global ConIn
 extern get_time
 extern update_clock_string
 extern ClockString
+extern current_second
 
 global current_mode
 
@@ -18,14 +19,6 @@ extern print_string
 extern clear_screen
 extern render_ui
 
-
-global msg_header_clock
-global msg_header_chrono
-global msg_header_alarm
-global msg_display_top
-global msg_display_bottom
-global msg_alarm
-global msg_controls
 
 ; ==============================================================================
 ; SECCIÓN DE DATOS INICIALIZADOS
@@ -38,31 +31,6 @@ section .data
                    __utf16__(`=================================\r\n\r\n`), \
                    __utf16__(`> Presione cualquier tecla para iniciar...\r\n`), 0
 
-    msg_header_clock dw __utf16__(`+-------------------------------------------------------+\r\n`), \
-                        __utf16__(`|       SISTEMA DE TIEMPO REAL - MODO RELOJ             |\r\n`), \
-                        __utf16__(`+-------------------------------------------------------+\r\n\r\n`), 0
-
-    msg_header_chrono dw __utf16__(`+-------------------------------------------------------+\r\n`), \
-                         __utf16__(`|    SISTEMA DE TIEMPO REAL - MODO CRONOMETRO          |\r\n`), \
-                         __utf16__(`+-------------------------------------------------------+\r\n\r\n`), 0
-
-    msg_header_alarm dw __utf16__(`+-------------------------------------------------------+\r\n`), \
-                        __utf16__(`|       SISTEMA DE TIEMPO REAL - MODO ALARMA            |\r\n`), \
-                        __utf16__(`+-------------------------------------------------------+\r\n\r\n`), 0
-
-    msg_display_top dw __utf16__(`              +---------------------------+\r\n`), \
-                   __utf16__(`              |  HORA ACTUAL:  `), 0
-
-    msg_display_bottom dw __utf16__(`   |\r\n`), \
-                        __utf16__(`              +---------------------------+\r\n\r\n`), 0
-
-    msg_alarm   dw __utf16__(`  [ Alarma: DESACTIVADA ( --:-- ) ]\r\n\r\n`), 0
-
-    msg_controls dw __utf16__(`+-------------------------------------------------------+\r\n`), \
-                    __utf16__(`| [M] Cambiar Modo | [R] Reiniciar | [A] Config. Alarma |\r\n`), \
-                    __utf16__(`| [C] Cancel Alarma| [ESC/Q] Salir                       |\r\n`), \
-                    __utf16__(`+-------------------------------------------------------+\r\n`), 0
-    msg_colon dw __utf16__(`:`), 0
 
 ; ==============================================================================
 ; SECCIÓN DE VARIABLES NO INICIALIZADAS (BSS)
@@ -75,11 +43,12 @@ section .bss
     KeyBuffer   resb 4
     NumberBuffer resw 3
 
-
     ; 0 = RELOJ
     ; 1 = CRONÓMETRO
     ; 2 = ALARMA
     current_mode resb 1
+
+    previous_second resb 1
     
 
 ; ==============================================================================
@@ -114,35 +83,70 @@ main_app:
     call render_ui
     
 ; ------------------------------------------------------------------------------
-; BUCLE PRINCIPAL 
+; BUCLE PRINCIPAL
 ; ------------------------------------------------------------------------------
 main_loop:
+
+    ; ==========================================================
+    ; 1. ACTUALIZAR HORA
+    ; ==========================================================
+
+    call get_time
+
+    mov al, [current_second]
+
+    ; ¿Cambió el segundo?
+    cmp al, [previous_second]
+    je .check_keyboard
+
+    ; Guardar nuevo segundo
+    mov [previous_second], al
+
+    ; Actualizar cadena HH:MM:SS
+    call update_clock_string
+
+    ; Redibujar interfaz
+    call render_ui
+
+
+.check_keyboard:
+
+    ; ==========================================================
+    ; 2. COMPROBAR TECLADO
+    ; ==========================================================
+
     mov rcx, [ConIn]
     lea rdx, [KeyBuffer]
+
     mov rax, [rcx + 0x08]       ; ReadKeyStroke
     call rax
 
-    cmp rax, 0                  ; ¿Se presionó una tecla? (EFI_SUCCESS = 0)
-    jne main_loop               ; Si no hay tecla, continuar el bucle
+    cmp rax, 0
+    jne main_loop              ; No hay tecla
 
 
-    ; --- DETECTAR SALIDA (ESC o 'Q' / 'q') ---
-    
-    ; 1. Comprobar si presionó la tecla ESC (ScanCode = 0x0017)
-    mov ax, [KeyBuffer]         ; ScanCode (Bytes 0 y 1 de KeyBuffer)
-    cmp ax, 0x0017              ; 0x0017 = ScanCode para ESC
+    ; ==========================================================
+    ; 3. DETECTAR SALIDA
+    ; ==========================================================
+
+    ; ESC
+    mov ax, [KeyBuffer]
+    cmp ax, 0x0017
     je exit_program
 
-    ; 2. Comprobar si presionó 'Q' o 'q' (UnicodeChar = 0x0051 o 0x0071)
-    mov ax, [KeyBuffer + 2]     ; UnicodeChar (Bytes 2 y 3 de KeyBuffer)
+    ; Q
+    mov ax, [KeyBuffer + 2]
     cmp ax, 'Q'
     je exit_program
+
+    ; q
     cmp ax, 'q'
     je exit_program
 
-    ; --- DETECTAR CAMBIO DE MODO (M / m) ---
 
-    mov ax, [KeyBuffer + 2]
+    ; ==========================================================
+    ; 4. DETECTAR CAMBIO DE MODO
+    ; ==========================================================
 
     cmp ax, 'M'
     je change_mode
@@ -151,10 +155,7 @@ main_loop:
     je change_mode
 
 
-    jmp main_loop               ; Si fue otra tecla, continuar
-
-
-
+    jmp main_loop
 
 ; ------------------------------------------------------------------------------
 ; FUNCIÓN: change_mode
@@ -175,7 +176,6 @@ change_mode:
     call render_ui
 
     jmp main_loop
-
 
 
 ; ------------------------------------------------------------------------------
