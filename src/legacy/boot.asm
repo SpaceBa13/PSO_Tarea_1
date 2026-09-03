@@ -28,18 +28,18 @@ error_disco:
 ; =============== Programa ====================
 start:
     ; Configuracion de segmentos y pila
-    cli ; pone en pausa las interrupciones
-    xor ax, ax ; esto hace que ax sea 0
-    mov ds, ax ; ds -> 0
-    mov es, ax ; es -> 0
-    mov ss, ax ; ss -> 0
-    mov sp, 0x7C00 ; mueve al stack pointer esa direccion
-    sti ; habilita las interrupciones
+    cli                     ; pone en pausa las interrupciones
+    xor ax, ax              ; esto hace que ax sea 0
+    mov ds, ax              ; ds -> 0
+    mov es, ax              ; es -> 0
+    mov ss, ax              ; ss -> 0
+    mov sp, 0x7C00          ; mueve al stack pointer esa direccion
+    sti                     ; habilita las interrupciones
 
     mov [boot_drive], dl
 
-    mov si, bienvenida ; cargamos el mensaje a si
-    call imprimir_cadena ; vamos a la rutina
+    mov si, bienvenida      ; cargamos el mensaje a si
+    call imprimir_cadena    ; vamos a la rutina
 
 esperar_enter:
     xor ah, ah
@@ -79,8 +79,8 @@ fallo_disco:
     call imprimir_cadena
 
 fin:
-    cli ; detener interrupciones
-    hlt ; detener programa 
+    cli                         ; detener interrupciones
+    hlt                         ; detener programa 
 
 ; ============== Rutinas ====================
 
