@@ -1,5 +1,7 @@
 ; ===================== Manejo de Reloj :D ==================
 
+
+
 mostrar_hora:
     mov dh, [segundo_actual]
     mov [segundo_anterior], dh
@@ -46,9 +48,7 @@ actualizar_reloj:
 .fin:
     ret
 
-; ==============================
-; Variables del reloj
-; ==============================
+; ==============Variables del reloj================
 
 hora_actual:
     db 0

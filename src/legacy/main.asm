@@ -6,40 +6,28 @@ org 0x8000
 jmp start_main
 
 ; ============= Mensajes =============
-titulo:
-    db '=== RELOJ / CRONOMETRO ===', 13, 10
-    db 0
-
-opciones:
-    db '[Q] Salir ', 13, 10
-    db 0
 
 dos_puntos:
     db ':', 0
 
 ; ============= Programa =============
 start_main:
-    call limpiar_pant
-
-    ;---- mostrar titulo ----
-    mov dh, 0x00    ; fila
-    mov dl, 0x17    ; columna
-    call mover_cursor
-
-    mov si, titulo   ; copiar a si la cadena de texto a imprimir
-    call imprimir_cadena
-
-    ;----- mostrar opciones ----
-    mov dh, 0x0F    ; fila
-    mov dl, 0x14    ; columna
-    call mover_cursor
-
-    mov si, opciones
-    call imprimir_cadena
+    call mostrar_interfaz_reloj
 
     loop_programa:
-        call actualizar_reloj
+        call revisar_opciones
 
+        cmp byte [modo_actual], 1
+        je modo_cronometro
+
+        call actualizar_reloj
+        jmp seguir
+        
+        modo_cronometro:
+            call actualizar_cronometro
+
+        
+        seguir:
         hlt
 
         jmp loop_programa
@@ -48,8 +36,52 @@ fin:
     cli
     hlt
 
+;================== rutinas =================
+
+revisar_opciones:
+    mov ah, 0x01
+    int 0x16
+
+    jz .fin
+
+    xor ah, ah
+    int 0x16
+
+    cmp al, 'q'
+    je fin              ; cambiarlo para que salga 
+
+    ;cmp al, 'a'
+    ;je configurar_alarma
+
+    cmp al, 'm'
+    jne .fin
+
+    call cambiar_modo
+
+.fin:
+    ret
+
+cambiar_modo:
+    xor byte [modo_actual], 1 ;cambiamos el modo 
+
+    cmp byte [modo_actual], 0
+    je .interfaz_reloj
+
+    call mostrar_interfaz_cronometro
+    ret
+
+.interfaz_reloj:
+    call mostrar_interfaz_reloj
+    ret
+
+; ================= variables ===================
+modo_actual:
+    db 0
+
 ;================== rutinas externas =================
 
 %include "video.asm"
 %include "reloj.asm"
+%include "cronometro.asm"
 
+times 1024 - ($ - $$) db 0

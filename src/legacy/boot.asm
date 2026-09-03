@@ -58,7 +58,7 @@ esperar_enter:
     mov bx, 0x8000
 
     mov ah, 0x02        ; funcion BIOS: leer sectores
-    mov al, 0x01        ; cantidad: 1 sector
+    mov al, 0x02        ; cantidad: 2 sectores
 
     mov ch, 0x00        ; cilindro 0
     mov dh, 0x00        ; cabeza 0
