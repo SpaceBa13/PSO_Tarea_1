@@ -13,14 +13,12 @@ start_main:
     loop_programa:
         call revisar_opciones
 
+        call actualizar_cronometro
+
         cmp byte [modo_actual], 1
-        je modo_cronometro
+        je seguir
 
         call actualizar_reloj
-        jmp seguir
-        
-        modo_cronometro:
-            call actualizar_cronometro
 
         
         seguir:

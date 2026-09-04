@@ -44,7 +44,7 @@ actualizar_cronometro:
     mov ax, dx
     sub ax, [tick_anterior] ; ax = tick actual - tick anterior
     
-    cmp ax, 18 ; Han pasado aproximadamente 18 ticks?
+    cmp ax, 18 ; Han pasado aproximadamente 18 ticks
     jb .fin_actc ; si no dejar todo igual
 
     inc byte [segundos_c] ; si paso aproximadamente un segundo
@@ -60,6 +60,9 @@ actualizar_cronometro:
     mov byte [segundos_c], 0
 
 .mostrar:
+    cmp byte [modo_actual], 1
+    jne .fin_actc
+
     call mostrar_cronometro
 
 .fin_actc:   

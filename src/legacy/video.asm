@@ -183,5 +183,7 @@ mostrar_interfaz_cronometro:
     mov si, opciones_cronometro
     call imprimir_cadena
 
+    call mostrar_cronometro
+
     ret
 
