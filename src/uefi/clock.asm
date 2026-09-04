@@ -25,11 +25,29 @@ global pause_chronometer
 global reset_chronometer
 global update_chronometer
 
+
+
+global alarm_hour
+global alarm_minute
+global alarm_is_set
+global AlarmString
+
+global configure_alarm_time
+global update_alarm_string
+global reset_alarm
+global check_alarm
+global stop_alarm
+
+
+
+
+
 ; ==============================================================================
 ; VARIABLES EXTERNAS
 ; ==============================================================================
 
 extern SystemTable
+extern ConIn 
 
 ; ==============================================================================
 ; SECCIÓN BSS
@@ -75,6 +93,29 @@ section .bss
     ; 0 = nunca iniciado
     ; 1 = ya iniciado
     chrono_started resb 1
+
+
+
+    ; ----------------------------------------------------------
+    ; TIEMPO DE LA ALARMA
+    ; ----------------------------------------------------------
+
+    alarm_hour   resb 1
+    alarm_minute resb 1
+
+    ; Estado:
+    ; 0 = alarma desactivada
+    ; 1 = alarma configurada
+    ; 2 = alarma sonando
+    alarm_is_set resb 1
+
+    ; Cadena UTF-16 de la alarma: "HH:MM"
+    AlarmString resw 6
+
+    ; Buffer temporal para introducir HHMM
+    AlarmInputBuffer resb 4
+    AlarmInputIndex  resb 1
+    AlarmKeyBuffer   resb 4
 
     
 
@@ -267,7 +308,7 @@ update_chrono_string:
     movzx edx, dl
     mov [ChronoString + 2], dx
 
-    ; ----------------------------------------------------------
+    ; ----  ------------------------------------------------------
     ; :
     ; ----------------------------------------------------------
 
@@ -613,4 +654,331 @@ update_chronometer:
     mov [chrono_second], dl
 
     add rsp, 40
+    ret
+
+; ==============================================================================
+; update_alarm_string
+;
+; Convierte:
+;
+;   alarm_hour
+;   alarm_minute
+;
+; en una cadena UTF-16:
+;
+;   "HH:MM"
+; ==============================================================================
+
+update_alarm_string:
+    sub rsp, 40
+
+    ; ----------------------------------------------------------
+    ; HORAS
+    ; ----------------------------------------------------------
+
+    movzx eax, byte [alarm_hour]
+
+    xor edx, edx
+    mov ecx, 10
+    div ecx
+
+    ; Decena
+    add al, '0'
+    movzx eax, al
+    mov [AlarmString + 0], ax
+
+    ; Unidad
+    add dl, '0'
+    movzx edx, dl
+    mov [AlarmString + 2], dx
+
+    ; :
+    mov word [AlarmString + 4], ':'
+
+    ; ----------------------------------------------------------
+    ; MINUTOS
+    ; ----------------------------------------------------------
+
+    movzx eax, byte [alarm_minute]
+
+    xor edx, edx
+    mov ecx, 10
+    div ecx
+
+    ; Decena
+    add al, '0'
+    movzx eax, al
+    mov [AlarmString + 6], ax
+
+    ; Unidad
+    add dl, '0'
+    movzx edx, dl
+    mov [AlarmString + 8], dx
+
+    ; Terminador UTF-16
+    mov word [AlarmString + 10], 0
+
+    add rsp, 40
+    ret
+
+; ==============================================================================
+; reset_alarm
+;
+; Cancela completamente la alarma.
+; ==============================================================================
+
+reset_alarm:
+    mov byte [alarm_hour], 0
+    mov byte [alarm_minute], 0
+    mov byte [alarm_is_set], 0
+
+    call update_alarm_string
+
+    ret
+
+; ==============================================================================
+; configure_alarm_time
+;
+; Recibe 4 dígitos:
+;
+;     HHMM
+;
+; Ejemplo:
+;
+;     0730
+;
+; Valida:
+;
+;     HH < 24
+;     MM < 60
+;
+; Retorno:
+;
+;     RAX = 1 -> configuración válida
+;     RAX = 0 -> configuración inválida / cancelada
+; ==============================================================================
+
+configure_alarm_time:
+    sub rsp, 40
+
+    ; ----------------------------------------------------------
+    ; Inicializar buffer
+    ; ----------------------------------------------------------
+
+    mov byte [AlarmInputBuffer + 0], '_'
+    mov byte [AlarmInputBuffer + 1], '_'
+    mov byte [AlarmInputBuffer + 2], '_'
+    mov byte [AlarmInputBuffer + 3], '_'
+
+    mov byte [AlarmInputIndex], 0
+
+.input_loop:
+
+    ; ----------------------------------------------------------
+    ; Esperar una tecla
+    ; ----------------------------------------------------------
+
+    mov rcx, [ConIn]
+    lea rdx, [AlarmKeyBuffer]
+
+    mov rax, [rcx + 0x08]
+    call rax
+
+    ; EFI_NOT_READY -> no hay tecla
+    cmp rax, 0
+    jne .input_loop
+
+    ; ----------------------------------------------------------
+    ; Revisar ESC
+    ; ----------------------------------------------------------
+
+    mov ax, [AlarmKeyBuffer]
+
+    cmp ax, 0x0017
+    je .cancel
+
+    ; ----------------------------------------------------------
+    ; Obtener UnicodeChar
+    ; ----------------------------------------------------------
+
+    mov ax, [AlarmKeyBuffer + 2]
+
+    ; ----------------------------------------------------------
+    ; ¿Es menor que '0'?
+    ; ----------------------------------------------------------
+
+    cmp ax, '0'
+    jb .input_loop
+
+    ; ----------------------------------------------------------
+    ; ¿Es mayor que '9'?
+    ; ----------------------------------------------------------
+
+    cmp ax, '9'
+    ja .input_loop
+
+    ; ----------------------------------------------------------
+    ; Guardar dígito
+    ; ----------------------------------------------------------
+
+    movzx ecx, byte [AlarmInputIndex]
+
+    lea rdi, [AlarmInputBuffer]
+    add rdi, rcx
+
+    mov [rdi], al
+
+    inc byte [AlarmInputIndex]
+
+    ; ----------------------------------------------------------
+    ; ¿Ya tenemos los 4 dígitos?
+    ; ----------------------------------------------------------
+
+    cmp byte [AlarmInputIndex], 4
+    jb .input_loop
+
+    ; ----------------------------------------------------------
+    ; VALIDAR HORA
+    ;
+    ; HH = buffer[0] * 10 + buffer[1]
+    ; ----------------------------------------------------------
+
+    movzx eax, byte [AlarmInputBuffer + 0]
+    sub eax, '0'
+
+    imul eax, 10
+
+    movzx edx, byte [AlarmInputBuffer + 1]
+    sub edx, '0'
+
+    add eax, edx
+
+    ; HH >= 24 -> inválido
+    cmp eax, 24
+    jae .invalid
+
+    ; ----------------------------------------------------------
+    ; Guardar hora temporalmente
+    ; ----------------------------------------------------------
+
+    mov r8d, eax
+
+    ; ----------------------------------------------------------
+    ; VALIDAR MINUTO
+    ;
+    ; MM = buffer[2] * 10 + buffer[3]
+    ; ----------------------------------------------------------
+
+    movzx eax, byte [AlarmInputBuffer + 2]
+    sub eax, '0'
+
+    imul eax, 10
+
+    movzx edx, byte [AlarmInputBuffer + 3]
+    sub edx, '0'
+
+    add eax, edx
+
+    ; MM >= 60 -> inválido
+    cmp eax, 60
+    jae .invalid
+
+    ; ----------------------------------------------------------
+    ; Guardar configuración válida
+    ; ----------------------------------------------------------
+
+    mov [alarm_minute], al
+    mov [alarm_hour], r8b
+
+    mov byte [alarm_is_set], 1
+
+    call update_alarm_string
+
+    mov eax, 1
+
+    add rsp, 40
+    ret
+
+.invalid:
+
+    ; No modificamos la alarma anterior.
+    ; Simplemente indicamos que la nueva configuración
+    ; no era válida.
+
+    xor eax, eax
+
+    add rsp, 40
+    ret
+
+.cancel:
+
+    xor eax, eax
+
+    add rsp, 40
+    ret
+
+
+; ==============================================================================
+; check_alarm
+;
+; Comprueba si la hora actual coincide con la alarma.
+;
+; Estados:
+;
+;   0 = desactivada
+;   1 = configurada / armada
+;   2 = sonando
+;
+; Retorno:
+;
+;   RAX = 1 -> la alarma acaba de activarse
+;   RAX = 0 -> no ocurrió nada
+; ==============================================================================
+
+check_alarm:
+
+    xor eax, eax
+
+    ; ----------------------------------------------------------
+    ; Si no está configurada, no hacer nada
+    ; ----------------------------------------------------------
+
+    cmp byte [alarm_is_set], 1
+    jne .done
+
+    ; ----------------------------------------------------------
+    ; Comparar hora
+    ; ----------------------------------------------------------
+
+    mov al, [current_hour]
+    cmp al, [alarm_hour]
+    jne .done
+
+    ; ----------------------------------------------------------
+    ; Comparar minuto
+    ; ----------------------------------------------------------
+
+    mov al, [current_minute]
+    cmp al, [alarm_minute]
+    jne .done
+
+    ; ----------------------------------------------------------
+    ; HORA COINCIDE
+    ; ----------------------------------------------------------
+
+    mov byte [alarm_is_set], 2
+
+    mov eax, 1
+
+.done:
+    ret
+
+
+stop_alarm:
+    mov byte [alarm_hour], 0
+    mov byte [alarm_minute], 0
+    mov byte [alarm_is_set], 0
+
+    call update_alarm_string
+
     ret

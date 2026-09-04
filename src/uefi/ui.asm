@@ -17,10 +17,12 @@ global render_ui
 
 extern ConOut
 extern current_mode
+extern alarm_is_set
 extern get_time
 
 extern ClockString
 extern ChronoString
+extern AlarmString
 
 
 
@@ -81,8 +83,13 @@ section .data
     ; ALARMA
     ; ==========================================================
 
-    ; Mensaje utilizado para mostrar el estado de la alarma.
-    msg_alarm dw __utf16__(`  [ Alarma: DESACTIVADA ( --:-- ) ]\r\n\r\n`), 0
+    msg_alarm_off dw __utf16__(`  [ Alarma: DESACTIVADA ( `), 0
+
+    msg_alarm_on dw __utf16__(`  [ Alarma: CONFIGURADA  ( `), 0
+
+    msg_alarm_ring dw __utf16__(`  [ Alarma: SONANDO!!!   ( `), 0
+
+    msg_alarm_end dw __utf16__(` ) ]\r\n\r\n`), 0
 
 
     ; ==========================================================
@@ -259,11 +266,51 @@ render_ui:
     lea rcx, [msg_header_alarm]
     call print_string
 
+    ; ----------------------------------------------------------
     ; Mostrar estado de la alarma
-    lea rcx, [msg_alarm]
+    ; ----------------------------------------------------------
+
+    mov al, [alarm_is_set]
+
+    cmp al, 0
+    je .alarm_off
+
+    cmp al, 1
+    je .alarm_configured
+
+    cmp al, 2
+    je .alarm_ringing
+
+    jmp .alarm_off
+
+
+.alarm_off:
+    lea rcx, [msg_alarm_off]
+    call print_string
+    jmp .show_alarm_time
+
+
+.alarm_configured:
+    lea rcx, [msg_alarm_on]
+    call print_string
+    jmp .show_alarm_time
+
+
+.alarm_ringing:
+    lea rcx, [msg_alarm_ring]
     call print_string
 
-    ; Mostrar controles de la alarma
+
+.show_alarm_time:
+    ; Mostrar HH:MM
+    lea rcx, [AlarmString]
+    call print_string
+
+    ; Cerrar la línea
+    lea rcx, [msg_alarm_end]
+    call print_string
+
+    ; Mostrar controles
     lea rcx, [msg_alarm_controls]
     call print_string
 

@@ -36,6 +36,18 @@ extern reset_chronometer
 
 extern chrono_running
 
+
+extern alarm_is_set
+extern alarm_hour
+extern alarm_minute
+extern AlarmString
+
+extern configure_alarm_time
+extern update_alarm_string
+extern reset_alarm
+extern stop_alarm
+extern check_alarm
+
 ; ==============================================================================
 ; SECCIÓN DE DATOS INICIALIZADOS
 ; ==============================================================================
@@ -94,6 +106,12 @@ main_app:
     mov byte [chrono_minute], 0
     mov byte [chrono_second], 0
 
+    mov byte [alarm_hour], 0
+    mov byte [alarm_minute], 0
+    mov byte [alarm_is_set], 0
+
+    call update_alarm_string
+
     call update_chrono_string
 
 
@@ -121,6 +139,24 @@ main_loop:
     ; ==========================================================
 
     call get_time
+
+    ; ==========================================================
+    ; COMPROBAR ALARMA
+    ; ==========================================================
+
+    call check_alarm
+
+    ; RAX = 1 → la alarma acaba de activarse
+    ; RAX = 0 → no pasó nada
+
+    cmp eax, 1
+    jne .check_second
+
+    ; La alarma acaba de empezar a sonar.
+    ; Por ahora no hacemos nada.
+
+
+.check_second:
 
     ; ==========================================================
     ; COMPROBAR SI CAMBIÓ EL SEGUNDO
@@ -254,16 +290,20 @@ main_loop:
     ; ==========================================================
 
     cmp ax, 'S'
+    je alarm_set
     
     cmp ax, 's'
+    je alarm_set
 
     ; ==========================================================
     ; ALARMA - Cancelar alarma
     ; ==========================================================
 
     cmp ax, 'C'
+    je alarm_cancel
 
     cmp ax, 'c'
+    je alarm_cancel
 
 
     ; ==========================================================
@@ -271,8 +311,10 @@ main_loop:
     ; ==========================================================
 
     cmp ax, 'A'
+    je turn_off_alarm
 
     cmp ax, 'a'
+    je turn_off_alarm
 
 
 .skip_alarm_controls:
@@ -330,6 +372,43 @@ chrono_reset:
 
     jmp main_loop
 
+
+
+; ------------------------------------------------------------------------------
+; FUNCIÓN: alarm_set
+; ------------------------------------------------------------------------------
+alarm_set:
+    call configure_alarm_time   ; Lógica para pedir/capturar la hora
+    call update_alarm_string    ; Formatea la cadena de texto de la alarma
+
+    call render_ui
+    jmp main_loop
+
+; ------------------------------------------------------------------------------
+; FUNCIÓN: alarm_cancel
+; ------------------------------------------------------------------------------
+alarm_cancel:
+    call reset_alarm            ; Desactiva el flag y borra la hora
+    call update_alarm_string    ; Actualiza a "[ Alarma: DESACTIVADA ( --:-- ) ]"
+
+    call render_ui
+    jmp main_loop
+
+; ------------------------------------------------------------------------------
+; FUNCIÓN: turn_off_alarm
+; ------------------------------------------------------------------------------
+turn_off_alarm:
+    ; ----------------------------------------------------------
+    ; Solo apagar si la alarma está sonando
+    ; ----------------------------------------------------------
+
+    cmp byte [alarm_is_set], 2
+    jne main_loop
+
+    call stop_alarm
+
+    call render_ui
+    jmp main_loop
 
 ; ------------------------------------------------------------------------------
 ; FUNCIÓN: exit_program
