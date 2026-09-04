@@ -24,8 +24,7 @@ titulo_cronometro:
 
 opciones_cronometro:
     db '[Q] Salir ', 13, 10
-    db '[E] Empezar cronometro ', 13, 10
-    db '[T] Terminar cronometro ', 13, 10
+    db '[E] Empezar/Pausar cronometro ', 13, 10
     db '[R] Reiniciar cronometro ', 13, 10
     db '[M] Cambiar de modo ', 13, 10
     db '[A] Alarma ', 13, 10
@@ -34,6 +33,12 @@ opciones_cronometro:
 corazones:
     db '+++++++++++++++++++', 13,10
     db 0
+
+dos_puntos:
+    db ':', 0
+
+cero:
+    db '0', 0
 
 
 ;============================= Rutinas ===============================
@@ -118,8 +123,37 @@ mostrar_interfaz_reloj:
     mov si, opciones
     call imprimir_cadena
 
+    ret
 
+imprimir_numero:
+    push bx
 
+    xor ah, ah ; AX contiene el numero
+    mov bl, 10
+    div bl   ; AL = cociente, AH = residuo
+
+    
+    push ax ; Guardamos ambos resultados temporalmente
+
+    ; ---- imprimir decenas ----
+    add al, '0'
+
+    mov ah, 0x0E
+    mov bh, 0x00
+    int 0x10
+
+    ; Recuperamos cociente y residuo
+    pop ax
+
+    ; ---- imprimir unidades ----
+    mov al, ah
+    add al, '0'
+
+    mov ah, 0x0E
+    mov bh, 0x00
+    int 0x10
+
+    pop bx
     ret
 
 mostrar_interfaz_cronometro:
@@ -150,3 +184,4 @@ mostrar_interfaz_cronometro:
     call imprimir_cadena
 
     ret
+

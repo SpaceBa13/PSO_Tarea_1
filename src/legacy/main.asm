@@ -5,10 +5,6 @@ org 0x8000
 
 jmp start_main
 
-; ============= Mensajes =============
-
-dos_puntos:
-    db ':', 0
 
 ; ============= Programa =============
 start_main:
@@ -48,11 +44,14 @@ revisar_opciones:
     int 0x16
 
     cmp al, 'q'
-    je fin              ; cambiarlo para que salga 
+    je fin
 
-    ;cmp al, 'a'
-    ;je configurar_alarma
+    cmp byte [modo_actual], 1
+    jne .comp_modo
 
+    call revisar_ops_cronometro
+
+.comp_modo:
     cmp al, 'm'
     jne .fin
 
