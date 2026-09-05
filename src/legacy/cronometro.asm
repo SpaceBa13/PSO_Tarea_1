@@ -60,7 +60,10 @@ actualizar_cronometro:
     mov byte [segundos_c], 0
 
 .mostrar:
-    cmp byte [modo_actual], 1
+    cmp byte [alarma_disparada], 1 ; No dibujar el cronometro encima de la alarma
+    je .fin_actc
+
+    cmp byte [modo_actual], 1  ; Solo dibujar si estamos modo cronometro
     jne .fin_actc
 
     call mostrar_cronometro
@@ -71,7 +74,7 @@ actualizar_cronometro:
 mostrar_cronometro:
     ; Posicion del cronometro
     mov dh, 5
-    mov dl, 30
+    mov dl, 32
     call mover_cursor
 
     ; Minutos

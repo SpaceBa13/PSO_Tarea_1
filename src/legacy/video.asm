@@ -40,6 +40,9 @@ dos_puntos:
 cero:
     db '0', 0
 
+msg_fin:
+    db 'Programa finalizado. Puede apagar o reiniciar el equipo.', 0
+
 
 ;============================= Rutinas ===============================
     
@@ -109,7 +112,7 @@ mostrar_interfaz_reloj:
 
     ;---- mostrar titulo de modo----
     mov dh, 0x03    ; fila
-    mov dl, 0x17    ; columna
+    mov dl, 0x19    ; columna
     call mover_cursor
 
     mov si, titulo_reloj   ; copiar a si la cadena de texto a imprimir
@@ -219,19 +222,15 @@ leer_digito:
     ret
 
 mostrar_aviso_alarma:
-
-    ; Limpiar pantalla usando otro atributo
+    ; Pintar toda la pantalla con fondo rojo
     mov ah, 0x06
     mov al, 0x00
-
-    mov bh, 0x4F       ; fondo distinto / texto brillante
+    mov bh, 0x4F        ; fondo rojo, texto blanco brillante
     mov cx, 0x0000
     mov dx, 0x184F
-
     int 0x10
 
-
-    ; Mostrar mensaje
+    ; Mostrar mensaje principal
     mov dh, 10
     mov dl, 32
     call mover_cursor
@@ -239,6 +238,24 @@ mostrar_aviso_alarma:
     mov si, msg_alarma
     call imprimir_cadena
 
+    ; Mostrar opcion para cancelar
+    mov dh, 12
+    mov dl, 29
+    call mover_cursor
+
+    mov si, msg_cancelar_alarma
+    call imprimir_cadena
+
+    ret
+
+
+mostrar_mensaje_alarma:
+    mov dh, 10
+    mov dl, 32
+    call mover_cursor
+
+    mov si, msg_alarma
+    call imprimir_cadena
 
     mov dh, 12
     mov dl, 29
@@ -247,6 +264,60 @@ mostrar_aviso_alarma:
     mov si, msg_cancelar_alarma
     call imprimir_cadena
 
+    ret
+
+
+actualizar_parpadeo_alarma:
+    ; Solo hacer algo si la alarma esta sonando
+    cmp byte [alarma_disparada], 1
+    jne .fin
+
+    ; Leer ticks actuales
+    mov ah, 0x00
+    int 0x1A
+
+    ; Ver cuantos ticks han pasado
+    mov ax, dx
+    sub ax, [tick_parpadeo]
+
+    ; Aproximadamente medio segundo
+    cmp ax, 9
+    jb .fin
+
+    ; Guardar nueva referencia
+    mov [tick_parpadeo], dx
+
+    ; Alternar:
+    ; 0 -> 1
+    ; 1 -> 0
+    xor byte [estado_parpadeo], 1
+
+    cmp byte [estado_parpadeo], 1
+    je .rojo
+
+
+.negro:
+    mov bh, 0x0F
+    jmp .dibujar
+
+
+.rojo:
+    mov bh, 0x4F
+
+
+.dibujar:
+    ; Limpiar/rellenar toda la pantalla con ese atributo
+    mov ah, 0x06
+    mov al, 0x00
+    mov cx, 0x0000
+    mov dx, 0x184F
+    int 0x10
+
+    ; Como acabamos de limpiar la pantalla,
+    ; volvemos a dibujar el mensaje
+    call mostrar_mensaje_alarma
+
+.fin:
     ret
 
 redibujar_interfaz_actual:

@@ -103,12 +103,10 @@ configurar_alarma:
 
 revisar_alarma:
 
-    ; ¿Existe alarma configurada?
-    cmp byte [alarma_activa], 1
+    cmp byte [alarma_activa], 1 ; ver si ya hay alarma configurada
     jne .fin
 
-    ; ¿Ya se disparo?
-    cmp byte [alarma_disparada], 1
+    cmp byte [alarma_disparada], 1 ; ver si ya se activo
     je .fin
 
     ; Comparar hora
@@ -121,8 +119,16 @@ revisar_alarma:
     cmp al, [alarma_minuto]
     jne .fin
 
-    ; Coincidieron HH:MM
+    ; Coincidieron los dos
     mov byte [alarma_disparada], 1
+
+    ; Inicializar el parpadeo
+    mov ah, 0x00
+    int 0x1A
+    mov [tick_parpadeo], dx
+
+    ; Empezamos en rojo
+    mov byte [estado_parpadeo], 1
 
     call mostrar_aviso_alarma
 
@@ -132,9 +138,9 @@ revisar_alarma:
 cancelar_alarma:
     mov byte [alarma_activa], 0
     mov byte [alarma_disparada], 0
+    mov byte [estado_parpadeo], 0
 
     ret
-
 
 
 
@@ -163,3 +169,9 @@ hora_tmp:
 
 minuto_tmp:
     db 0
+
+estado_parpadeo:
+    db 0
+
+tick_parpadeo:
+    dw 0

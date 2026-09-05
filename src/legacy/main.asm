@@ -12,27 +12,23 @@ start_main:
 
     loop_programa:
 
-    call revisar_opciones
+    call revisar_opciones ; Revisar teclado
 
-    ; Siempre conocer la hora real
-    call leer_hora_sistema
+    call leer_hora_sistema  ; Mantener actualizada la hora real
+
+    call actualizar_cronometro
 
     ; Siempre comprobar la alarma
     call revisar_alarma
+    call actualizar_parpadeo_alarma
 
 
-    ; Si la alarma esta mostrandose,
-    ; no redibujar encima
+    ; Si la alarma esta mostrandose no redibujar encima
     cmp byte [alarma_disparada], 1
     je .esperar
+    
 
-
-    ; El cronometro debe seguir actualizandose
-    ; aunque estemos viendo el reloj
-    call actualizar_cronometro
-
-
-    ; ¿Estamos viendo reloj?
+    ; Mostrar reloj solamente si estamos en modo reloj
     cmp byte [modo_actual], 0
     jne .esperar
 
@@ -43,8 +39,23 @@ start_main:
         jmp loop_programa
 
 fin:
+    ; Limpiar pantalla
+    call limpiar_pant
+
+    ; Mostrar mensaje
+    mov dh, 12
+    mov dl, 14
+    call mover_cursor
+
+    mov si, msg_fin
+    call imprimir_cadena
+
+    ; Ya no queremos interrupciones
     cli
+
+.detener:
     hlt
+    jmp .detener
 
 ;================== rutinas =================
 
@@ -79,6 +90,8 @@ revisar_opciones:
     jne .fin
 
     call cambiar_modo
+
+    jmp .fin
 
 .configurar:
     call configurar_alarma
