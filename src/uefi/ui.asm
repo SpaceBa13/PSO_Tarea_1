@@ -268,22 +268,39 @@ render_ui:
     lea rcx, [msg_header_alarm]
     call print_string
 
+
     ; ----------------------------------------------------------
-    ; Mostrar estado de la alarma
+    ; Guardar estado de la alarma
     ; ----------------------------------------------------------
 
-    mov al, [alarm_is_set]
+    movzx ebx, byte [alarm_is_set]
 
-    cmp al, 0
+
+    cmp ebx, 3
+    je .skip_print_clock
+
+    lea rcx, [msg_display_top]
+    call print_string
+
+    lea rcx, [ClockString]
+    call print_string
+
+    lea rcx, [msg_display_bottom]
+    call print_string
+
+    cmp ebx, 0
     je .alarm_off
 
-    cmp al, 1
+    cmp ebx, 1
     je .alarm_configured
 
-    cmp al, 2
+    cmp ebx, 2
     je .alarm_ringing
 
-    cmp al, 3
+
+    .skip_print_clock:
+
+    cmp ebx, 3
     je .alarm_input
 
 
