@@ -3,9 +3,7 @@
 default rel
 
 ; ==============================================================================
-
 ; EXPORTACIONES
-
 ; ==============================================================================
 
 ; Funciones relacionadas con el reloj
@@ -50,9 +48,7 @@ global stop_alarm
 
 
 ; ==============================================================================
-
 ; VARIABLES EXTERNAS
-
 ; ==============================================================================
 
 ; Interfaces de entrada y sistema UEFI
@@ -61,9 +57,7 @@ extern ConIn
 
 
 ; ==============================================================================
-
 ; SECCIÓN BSS
-
 ; ==============================================================================
 section .bss
 
@@ -75,28 +69,24 @@ section .bss
     current_minute resb 1
     current_second resb 1
 
-    
-    ; ----------------------------------------------------------
-    ; TIEMPO DEL CRONÓMETRO
-    ; ----------------------------------------------------------
-
+    ; Variables del tiempo del cronómetro
     chrono_hour   resb 1
     chrono_minute resb 1
     chrono_second resb 1
 
-    ; Cadenas
+    ; Cadenas de texto del reloj y cronómetro
     ClockString  resw 12
     ChronoString resw 12
 
-    ; Estado
+    ; Estado del cronómetro
     chrono_running resb 1
 
-    ; Momento en que se inició/reanudó
+    ; Hora en la que se inició o reanudó el cronómetro
     chrono_start_hour   resb 1
     chrono_start_minute resb 1
     chrono_start_second resb 1
 
-    ; Tiempo acumulado
+    ; Tiempo acumulado del cronómetro
     chrono_elapsed_hour   resb 1
     chrono_elapsed_minute resb 1
     chrono_elapsed_second resb 1
@@ -106,16 +96,11 @@ section .bss
     ; 1 = ya iniciado
     chrono_started resb 1
 
-
-
-    ; ----------------------------------------------------------
-    ; TIEMPO DE LA ALARMA
-    ; ----------------------------------------------------------
-
+    ; Variables del tiempo de la alarma
     alarm_hour   resb 1
     alarm_minute resb 1
 
-    ; Estado:
+    ; Estado de la alarma
     ; 0 = alarma desactivada
     ; 1 = alarma configurada
     ; 2 = alarma sonando
@@ -124,11 +109,10 @@ section .bss
     ; Cadena UTF-16 de la alarma: "HH:MM"
     AlarmString resw 6
 
-    ; Buffer temporal para introducir HHMM
+    ; Buffer para introducir la hora de la alarma
     AlarmInputBuffer resb 4
     AlarmInputIndex  resb 1
     AlarmKeyBuffer   resb 4
-
     
 
 ; ==============================================================================
@@ -141,37 +125,24 @@ section .text
 ; FUNCIÓN: get_time
 ;
 ; Obtiene la hora actual mediante RuntimeServices->GetTime.
-;
-; Resultado:
-;   current_hour
-;   current_minute
-;   current_second
 ; ------------------------------------------------------------------------------
-
 get_time:
+    ; Reservar espacio en la pila
     sub rsp, 40
 
-    ; ----------------------------------------------------------
     ; Obtener RuntimeServices desde EFI_SYSTEM_TABLE
-    ; ----------------------------------------------------------
-
     mov r8, [SystemTable]
     mov r8, [r8 + 0x58]
 
-    ; ----------------------------------------------------------
-    ; Llamar a RuntimeServices->GetTime
-    ; ----------------------------------------------------------
-
+    ; Preparar parámetros para GetTime
     lea rcx, [EfiTimeBuffer]
     xor edx, edx
 
+    ; Llamar a RuntimeServices->GetTime
     mov rax, [r8 + 0x18]
     call rax
 
-    ; ----------------------------------------------------------
     ; Guardar hora, minutos y segundos
-    ; ----------------------------------------------------------
-
     mov al, [EfiTimeBuffer + 0x04]
     mov [current_hour], al
 
@@ -181,31 +152,20 @@ get_time:
     mov al, [EfiTimeBuffer + 0x06]
     mov [current_second], al
 
+    ; Restaurar la pila y retornar
     add rsp, 40
     ret
-
 
 ; ------------------------------------------------------------------------------
 ; FUNCIÓN: update_clock_string
 ;
-; Convierte:
-;
-;   current_hour
-;   current_minute
-;   current_second
-;
-; en una cadena UTF-16:
-;
-;   "HH:MM:SS\0"
+; Convierte la hora actual en una cadena UTF-16 con formato "HH:MM:SS".
 ; ------------------------------------------------------------------------------
-
 update_clock_string:
+    ; Reservar espacio en la pila
     sub rsp, 40
 
-    ; ----------------------------------------------------------
     ; HORAS
-    ; ----------------------------------------------------------
-
     movzx eax, byte [current_hour]
 
     xor edx, edx
@@ -222,16 +182,10 @@ update_clock_string:
     movzx edx, dl
     mov [ClockString + 2], dx
 
-    ; ----------------------------------------------------------
-    ; :
-    ; ----------------------------------------------------------
-
+    ; Separador
     mov word [ClockString + 4], ':'
 
-    ; ----------------------------------------------------------
     ; MINUTOS
-    ; ----------------------------------------------------------
-
     movzx eax, byte [current_minute]
 
     xor edx, edx
@@ -248,16 +202,10 @@ update_clock_string:
     movzx edx, dl
     mov [ClockString + 8], dx
 
-    ; ----------------------------------------------------------
-    ; :
-    ; ----------------------------------------------------------
-
+    ; Separador
     mov word [ClockString + 10], ':'
 
-    ; ----------------------------------------------------------
     ; SEGUNDOS
-    ; ----------------------------------------------------------
-
     movzx eax, byte [current_second]
 
     xor edx, edx
@@ -274,36 +222,23 @@ update_clock_string:
     movzx edx, dl
     mov [ClockString + 14], dx
 
-    ; ----------------------------------------------------------
-    ; TERMINADOR UTF-16
-    ; ----------------------------------------------------------
-
+    ; Terminador UTF-16
     mov word [ClockString + 16], 0
 
+    ; Restaurar la pila y retornar
     add rsp, 40
     ret
 
 ; ------------------------------------------------------------------------------
 ; FUNCIÓN: update_chrono_string
 ;
-; Convierte:
-;
-;   chrono_hour
-;   chrono_minute
-;   chrono_second
-;
-; en una cadena UTF-16:
-;
-;   "HH:MM:SS\0"
+; Convierte el tiempo del cronómetro en una cadena UTF-16 con formato "HH:MM:SS".
 ; ------------------------------------------------------------------------------
-
 update_chrono_string:
+    ; Reservar espacio en la pila
     sub rsp, 40
 
-    ; ----------------------------------------------------------
     ; HORAS
-    ; ----------------------------------------------------------
-
     movzx eax, byte [chrono_hour]
 
     xor edx, edx
@@ -320,16 +255,10 @@ update_chrono_string:
     movzx edx, dl
     mov [ChronoString + 2], dx
 
-    ; ----  ------------------------------------------------------
-    ; :
-    ; ----------------------------------------------------------
-
+    ; Separador
     mov word [ChronoString + 4], ':'
 
-    ; ----------------------------------------------------------
     ; MINUTOS
-    ; ----------------------------------------------------------
-
     movzx eax, byte [chrono_minute]
 
     xor edx, edx
@@ -346,16 +275,10 @@ update_chrono_string:
     movzx edx, dl
     mov [ChronoString + 8], dx
 
-    ; ----------------------------------------------------------
-    ; :
-    ; ----------------------------------------------------------
-
+    ; Separador
     mov word [ChronoString + 10], ':'
 
-    ; ----------------------------------------------------------
     ; SEGUNDOS
-    ; ----------------------------------------------------------
-
     movzx eax, byte [chrono_second]
 
     xor edx, edx
@@ -372,42 +295,30 @@ update_chrono_string:
     movzx edx, dl
     mov [ChronoString + 14], dx
 
-    ; ----------------------------------------------------------
-    ; TERMINADOR UTF-16
-    ; ----------------------------------------------------------
-
+    ; Terminador UTF-16
     mov word [ChronoString + 16], 0
 
+    ; Restaurar la pila y retornar
     add rsp, 40
     ret
-
 
 ; ------------------------------------------------------------------------------
 ; FUNCIÓN: pause_chronometer
 ;
-; Guarda el tiempo actual del cronómetro para poder reanudar posteriormente.
+; Guarda el tiempo actual del cronómetro y lo pausa.
 ; ------------------------------------------------------------------------------
-
 pause_chronometer:
+    ; Reservar espacio en la pila
     sub rsp, 40
 
-    ; ----------------------------------------------------------
     ; Comprobar si está corriendo
-    ; ----------------------------------------------------------
-
     cmp byte [chrono_running], 1
     jne .done
 
-    ; ----------------------------------------------------------
-    ; Actualizar una última vez antes de pausar
-    ; ----------------------------------------------------------
-
+    ; Actualizar el tiempo antes de pausar
     call update_chronometer
 
-    ; ----------------------------------------------------------
-    ; Guardar tiempo acumulado
-    ; ----------------------------------------------------------
-
+    ; Guardar el tiempo acumulado
     mov al, [chrono_hour]
     mov [chrono_elapsed_hour], al
 
@@ -417,22 +328,21 @@ pause_chronometer:
     mov al, [chrono_second]
     mov [chrono_elapsed_second], al
 
-    ; ----------------------------------------------------------
-    ; Detener cronómetro
-    ; ----------------------------------------------------------
-
+    ; Detener el cronómetro
     mov byte [chrono_running], 0
 
 .done:
+    ; Restaurar la pila y retornar
     add rsp, 40
     ret
 
+
 ; ------------------------------------------------------------------------------
 ; FUNCIÓN: reset_chronometer
+;
+; Reinicia el cronómetro y borra el tiempo acumulado.
 ; ------------------------------------------------------------------------------
-
 reset_chronometer:
-
     mov byte [chrono_running], 0
     mov byte [chrono_started], 0
 
@@ -450,41 +360,20 @@ reset_chronometer:
 ; FUNCIÓN: start_chronometer
 ;
 ; Inicia o reanuda el cronómetro.
-;
-; Si es la primera ejecución:
-;     - Inicializa el tiempo acumulado en 00:00:00
-;     - Guarda la hora actual como punto de inicio
-;
-; Si estaba pausado:
-;     - Conserva el tiempo acumulado
-;     - Guarda la hora actual como nuevo punto de inicio
-;
-; chrono_running:
-;     0 = detenido
-;     1 = corriendo
 ; ------------------------------------------------------------------------------
-
 start_chronometer:
+    ; Reservar espacio en la pila
     sub rsp, 40
 
-    ; ----------------------------------------------------------
-    ; Comprobar si ya estaba corriendo
-    ; ----------------------------------------------------------
-
+    ; Comprobar si ya está corriendo
     cmp byte [chrono_running], 1
     je .done
 
-    ; ----------------------------------------------------------
     ; Comprobar si es la primera ejecución
-    ; ----------------------------------------------------------
-
     cmp byte [chrono_started], 1
     je .resume
 
-    ; ----------------------------------------------------------
-    ; PRIMER INICIO
-    ; ----------------------------------------------------------
-
+    ; Inicializar el tiempo en el primer inicio
     mov byte [chrono_elapsed_hour], 0
     mov byte [chrono_elapsed_minute], 0
     mov byte [chrono_elapsed_second], 0
@@ -496,17 +385,10 @@ start_chronometer:
     mov byte [chrono_started], 1
 
 .resume:
-
-    ; ----------------------------------------------------------
     ; Obtener la hora actual
-    ; ----------------------------------------------------------
-
     call get_time
 
-    ; ----------------------------------------------------------
-    ; Guardar hora actual como punto de inicio
-    ; ----------------------------------------------------------
-
+    ; Guardar la hora actual como punto de inicio
     mov al, [current_hour]
     mov [chrono_start_hour], al
 
@@ -516,52 +398,27 @@ start_chronometer:
     mov al, [current_second]
     mov [chrono_start_second], al
 
-    ; ----------------------------------------------------------
-    ; Marcar cronómetro como corriendo
-    ; ----------------------------------------------------------
-
+    ; Marcar el cronómetro como corriendo
     mov byte [chrono_running], 1
 
 .done:
-
+    ; Restaurar la pila y retornar
     add rsp, 40
     ret
 
 ; ------------------------------------------------------------------------------
 ; FUNCIÓN: update_chronometer
 ;
-; Calcula el tiempo actual del cronómetro.
-;
-; Tiempo del cronómetro =
-;
-;   tiempo acumulado
-;   +
-;   (hora actual - hora de inicio)
-;
-; Resultado:
-;
-;   chrono_hour
-;   chrono_minute
-;   chrono_second
+; Calcula y actualiza el tiempo actual del cronómetro.
 ; ------------------------------------------------------------------------------
-
 update_chronometer:
+    ; Reservar espacio en la pila
     sub rsp, 40
 
-    ; ----------------------------------------------------------
-    ; Obtener hora actual
-    ; ----------------------------------------------------------
-
+    ; Obtener la hora actual
     call get_time
 
-    ; ----------------------------------------------------------
-    ; Convertir HORA ACTUAL a segundos
-    ;
-    ; segundos = hora * 3600
-    ;           + minuto * 60
-    ;           + segundo
-    ; ----------------------------------------------------------
-
+    ; Convertir la hora actual a segundos
     movzx rax, byte [current_hour]
     imul rax, 3600
 
@@ -572,12 +429,7 @@ update_chronometer:
     movzx rcx, byte [current_second]
     add rax, rcx
 
-    ; RAX = segundos actuales del día
-
-    ; ----------------------------------------------------------
-    ; Convertir HORA DE INICIO a segundos
-    ; ----------------------------------------------------------
-
+    ; Convertir la hora de inicio a segundos
     movzx rcx, byte [chrono_start_hour]
     imul rcx, 3600
 
@@ -588,20 +440,10 @@ update_chronometer:
     movzx rdx, byte [chrono_start_second]
     add rcx, rdx
 
-    ; RCX = segundos del día cuando inició
-
-    ; ----------------------------------------------------------
-    ; Calcular tiempo transcurrido
-    ;
-    ; RAX = actual - inicio
-    ; ----------------------------------------------------------
-
+    ; Calcular el tiempo transcurrido
     sub rax, rcx
 
-    ; ----------------------------------------------------------
-    ; Comprobar si pasamos de medianoche
-    ; ----------------------------------------------------------
-
+    ; Ajustar si el cronómetro pasó de medianoche
     cmp rax, 0
     jge .no_midnight
 
@@ -609,10 +451,7 @@ update_chronometer:
 
 .no_midnight:
 
-    ; ----------------------------------------------------------
-    ; Convertir tiempo acumulado a segundos
-    ; ----------------------------------------------------------
-
+    ; Convertir el tiempo acumulado a segundos
     movzx rcx, byte [chrono_elapsed_hour]
     imul rcx, 3600
 
@@ -623,32 +462,17 @@ update_chronometer:
     movzx rdx, byte [chrono_elapsed_second]
     add rcx, rdx
 
-    ; RCX = tiempo acumulado
-
-    ; ----------------------------------------------------------
-    ; Sumar tiempo acumulado + tiempo actual
-    ; ----------------------------------------------------------
-
+    ; Sumar el tiempo acumulado y el tiempo transcurrido
     add rax, rcx
 
-    ; RAX = tiempo total del cronómetro en segundos
-
-    ; ----------------------------------------------------------
-    ; Convertir segundos totales a HORAS
-    ; ----------------------------------------------------------
-
+    ; Convertir segundos totales a horas
     xor rdx, rdx
     mov rcx, 3600
     div rcx
 
     mov [chrono_hour], al
 
-    ; RDX = segundos restantes
-
-    ; ----------------------------------------------------------
-    ; Convertir segundos restantes a MINUTOS
-    ; ----------------------------------------------------------
-
+    ; Convertir segundos restantes a minutos
     mov rax, rdx
 
     xor rdx, rdx
@@ -657,37 +481,23 @@ update_chronometer:
 
     mov [chrono_minute], al
 
-    ; RDX = segundos restantes
-
-    ; ----------------------------------------------------------
-    ; SEGUNDOS
-    ; ----------------------------------------------------------
-
+    ; Guardar los segundos restantes
     mov [chrono_second], dl
 
+    ; Restaurar la pila y retornar
     add rsp, 40
     ret
 
-; ==============================================================================
-; update_alarm_string
+; ------------------------------------------------------------------------------
+; FUNCIÓN: update_alarm_string
 ;
-; Convierte:
-;
-;   alarm_hour
-;   alarm_minute
-;
-; en una cadena UTF-16:
-;
-;   "HH:MM"
-; ==============================================================================
-
+; Convierte la hora de la alarma en una cadena UTF-16 con formato "HH:MM".
+; ------------------------------------------------------------------------------
 update_alarm_string:
+    ; Reservar espacio en la pila
     sub rsp, 40
 
-    ; ----------------------------------------------------------
-    ; HORAS
-    ; ----------------------------------------------------------
-
+    ; Convertir las horas a caracteres
     movzx eax, byte [alarm_hour]
 
     xor edx, edx
@@ -704,13 +514,10 @@ update_alarm_string:
     movzx edx, dl
     mov [AlarmString + 2], dx
 
-    ; :
+    ; Separador
     mov word [AlarmString + 4], ':'
 
-    ; ----------------------------------------------------------
-    ; MINUTOS
-    ; ----------------------------------------------------------
-
+    ; Convertir los minutos a caracteres
     movzx eax, byte [alarm_minute]
 
     xor edx, edx
@@ -730,8 +537,10 @@ update_alarm_string:
     ; Terminador UTF-16
     mov word [AlarmString + 10], 0
 
+    ; Restaurar la pila y retornar
     add rsp, 40
     ret
+
 
 ; ==============================================================================
 ; reset_alarm
@@ -748,38 +557,19 @@ reset_alarm:
 
     ret
 
-; ==============================================================================
-; configure_alarm_time
+; ------------------------------------------------------------------------------
+; FUNCIÓN: configure_alarm_time
 ;
-; Recibe 4 dígitos:
-;
-;     HHMM
-;
-; Ejemplo:
-;
-;     0730
-;
-; Valida:
-;
-;     HH < 24
-;     MM < 60
-;
-; Retorno:
-;
-;     RAX = 1 -> configuración válida
-;     RAX = 0 -> configuración inválida / cancelada
-; ==============================================================================
-
+; Recibe cuatro dígitos, valida la hora y configura la alarma.
+; ------------------------------------------------------------------------------
 configure_alarm_time:
+    ; Reservar espacio en la pila
     sub rsp, 40
     
-    ; La alarma está siendo configurada
+    ; Indicar que la alarma está siendo configurada
     mov byte [alarm_is_set], 3
 
-    ; ----------------------------------------------------------
-    ; Inicializar buffer
-    ; ----------------------------------------------------------
-
+    ; Inicializar buffer de entrada
     mov byte [AlarmInputBuffer + 0], '_'
     mov byte [AlarmInputBuffer + 1], '_'
     mov byte [AlarmInputBuffer + 2], '_'
@@ -788,11 +578,7 @@ configure_alarm_time:
     mov byte [AlarmInputIndex], 0
 
 .input_loop:
-
-    ; ----------------------------------------------------------
     ; Esperar una tecla
-    ; ----------------------------------------------------------
-
     mov rcx, [ConIn]
     lea rdx, [AlarmKeyBuffer]
 
@@ -803,39 +589,23 @@ configure_alarm_time:
     cmp rax, 0
     jne .input_loop
 
-    ; ----------------------------------------------------------
-    ; Revisar ESC
-    ; ----------------------------------------------------------
-
+    ; Comprobar si se presionó ESC
     mov ax, [AlarmKeyBuffer]
 
     cmp ax, 0x0017
     je .cancel
 
-    ; ----------------------------------------------------------
     ; Obtener UnicodeChar
-    ; ----------------------------------------------------------
-
     mov ax, [AlarmKeyBuffer + 2]
 
-    ; ----------------------------------------------------------
-    ; ¿Es menor que '0'?
-    ; ----------------------------------------------------------
-
+    ; Comprobar si es un dígito
     cmp ax, '0'
     jb .input_loop
-
-    ; ----------------------------------------------------------
-    ; ¿Es mayor que '9'?
-    ; ----------------------------------------------------------
 
     cmp ax, '9'
     ja .input_loop
 
-    ; ----------------------------------------------------------
-    ; Guardar dígito
-    ; ----------------------------------------------------------
-
+    ; Guardar dígito en el buffer
     movzx ecx, byte [AlarmInputIndex]
 
     lea rdi, [AlarmInputBuffer]
@@ -845,19 +615,12 @@ configure_alarm_time:
 
     inc byte [AlarmInputIndex]
 
-    ; ----------------------------------------------------------
-    ; ¿Ya tenemos los 4 dígitos?
-    ; ----------------------------------------------------------
-
+    ; Comprobar si ya se recibieron los cuatro dígitos
     cmp byte [AlarmInputIndex], 4
     jb .input_loop
 
-    ; ----------------------------------------------------------
-    ; VALIDAR HORA
-    ;
+    ; Validar las horas
     ; HH = buffer[0] * 10 + buffer[1]
-    ; ----------------------------------------------------------
-
     movzx eax, byte [AlarmInputBuffer + 0]
     sub eax, '0'
 
@@ -872,18 +635,11 @@ configure_alarm_time:
     cmp eax, 24
     jae .invalid
 
-    ; ----------------------------------------------------------
     ; Guardar hora temporalmente
-    ; ----------------------------------------------------------
-
     mov r8d, eax
 
-    ; ----------------------------------------------------------
-    ; VALIDAR MINUTO
-    ;
+    ; Validar los minutos
     ; MM = buffer[2] * 10 + buffer[3]
-    ; ----------------------------------------------------------
-
     movzx eax, byte [AlarmInputBuffer + 2]
     sub eax, '0'
 
@@ -898,89 +654,73 @@ configure_alarm_time:
     cmp eax, 60
     jae .invalid
 
-    ; ----------------------------------------------------------
     ; Guardar configuración válida
-    ; ----------------------------------------------------------
-
     mov [alarm_minute], al
     mov [alarm_hour], r8b
 
     mov byte [alarm_is_set], 1
 
+    ; Actualizar la cadena de la alarma
     call update_alarm_string
 
+    ; Indicar configuración válida
     mov eax, 1
 
     add rsp, 40
     ret
 
 .invalid:
-
-    ; No modificamos la alarma anterior.
-    ; Simplemente indicamos que la nueva configuración
-    ; no era válida.
-
+    ; Indicar configuración inválida
     xor eax, eax
 
     add rsp, 40
     ret
 
 .cancel:
-
+    ; Indicar configuración cancelada
     xor eax, eax
 
     add rsp, 40
     ret
 
+; ------------------------------------------------------------------------------
+; FUNCIÓN: stop_alarm
+;
+; Detiene la alarma y restablece su configuración.
+; ------------------------------------------------------------------------------
+stop_alarm:
+    mov byte [alarm_hour], 0
+    mov byte [alarm_minute], 0
+    mov byte [alarm_is_set], 0
 
-; ==============================================================================
-; check_alarm
-;
-; Comprueba si la hora actual coincide con la alarma.
-;
-; Estados:
-;
-;   0 = desactivada
-;   1 = configurada / armada
-;   2 = sonando
-;
-; Retorno:
-;
-;   RAX = 1 -> la alarma acaba de activarse
-;   RAX = 0 -> no ocurrió nada
-; ==============================================================================
+    ; Actualizar la cadena de la alarma
+    call update_alarm_string
 
+    ret
+
+; ------------------------------------------------------------------------------
+; FUNCIÓN: check_alarm
+;
+; Comprueba si la hora actual coincide con la hora configurada de la alarma.
+; ------------------------------------------------------------------------------
 check_alarm:
-
     xor eax, eax
 
-    ; ----------------------------------------------------------
-    ; Si no está configurada, no hacer nada
-    ; ----------------------------------------------------------
-
+    ; Comprobar si la alarma está configurada
     cmp byte [alarm_is_set], 1
     jne .done
 
-    ; ----------------------------------------------------------
     ; Comparar hora
-    ; ----------------------------------------------------------
-
     mov al, [current_hour]
     cmp al, [alarm_hour]
     jne .done
 
-    ; ----------------------------------------------------------
     ; Comparar minuto
-    ; ----------------------------------------------------------
-
     mov al, [current_minute]
     cmp al, [alarm_minute]
     jne .done
 
-    ; ----------------------------------------------------------
-    ; HORA COINCIDE
-    ; ----------------------------------------------------------
-
+    ; Activar la alarma
     mov byte [alarm_is_set], 2
 
     mov eax, 1
@@ -988,12 +728,3 @@ check_alarm:
 .done:
     ret
 
-
-stop_alarm:
-    mov byte [alarm_hour], 0
-    mov byte [alarm_minute], 0
-    mov byte [alarm_is_set], 0
-
-    call update_alarm_string
-
-    ret
