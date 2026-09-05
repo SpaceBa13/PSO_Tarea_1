@@ -760,6 +760,9 @@ reset_alarm:
 
 configure_alarm_time:
     sub rsp, 40
+    
+    ; La alarma está siendo configurada
+    mov byte [alarm_is_set], 3
 
     ; ----------------------------------------------------------
     ; Inicializar buffer

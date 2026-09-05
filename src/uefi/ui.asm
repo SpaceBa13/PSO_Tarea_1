@@ -89,6 +89,8 @@ section .data
 
     msg_alarm_ring dw __utf16__(`  [ Alarma: SONANDO!!!   ( `), 0
 
+    msg_alarm_input dw __utf16__(`  [ Alarma: CONFIGURANDO ( `), 0
+
     msg_alarm_end dw __utf16__(` ) ]\r\n\r\n`), 0
 
 
@@ -281,6 +283,10 @@ render_ui:
     cmp al, 2
     je .alarm_ringing
 
+    cmp al, 3
+    je .alarm_input
+
+
     jmp .alarm_off
 
 
@@ -292,6 +298,11 @@ render_ui:
 
 .alarm_configured:
     lea rcx, [msg_alarm_on]
+    call print_string
+    jmp .show_alarm_time
+
+.alarm_input:
+    lea rcx, [msg_alarm_input]
     call print_string
     jmp .show_alarm_time
 
@@ -323,5 +334,34 @@ render_ui:
 
 .done:
     ; Restaurar la pila y retornar
+    add rsp, 40
+    ret
+
+
+; ------------------------------------------------------------------------------
+; FUNCIÓN: set_color
+;
+; Cambia el color de texto de la consola UEFI.
+;
+; Entrada:
+;     RCX = atributo de color
+;
+; Ejemplo:
+;     0x07 = gris claro
+;     0x0E = amarillo
+;     0x0C = rojo claro
+;     0x0A = verde claro
+;     0x0F = blanco
+; ------------------------------------------------------------------------------
+set_color:
+    sub rsp, 40
+
+    mov rdx, rcx
+    mov rcx, [ConOut]
+
+    ; SetAttribute está en offset 0x28
+    mov rax, [rcx + 0x28]
+    call rax
+
     add rsp, 40
     ret

@@ -378,12 +378,13 @@ chrono_reset:
 ; FUNCIÓN: alarm_set
 ; ------------------------------------------------------------------------------
 alarm_set:
-    call configure_alarm_time   ; Lógica para pedir/capturar la hora
-    call update_alarm_string    ; Formatea la cadena de texto de la alarma
+    mov byte [alarm_is_set], 3
+    call render_ui
 
+    call configure_alarm_time
+    call update_alarm_string
     call render_ui
     jmp main_loop
-
 ; ------------------------------------------------------------------------------
 ; FUNCIÓN: alarm_cancel
 ; ------------------------------------------------------------------------------
