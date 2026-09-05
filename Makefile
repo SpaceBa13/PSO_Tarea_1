@@ -40,3 +40,8 @@ run-uefi: uefi
 
 clean:
 	rm -rf $(BUILD_DIR)
+
+# mkdir -p /run/media/space/EFIUSB/EFI/BOOT
+# cp build/esp/EFI/BOOT/BOOTX64.EFI /run/media/space/EFIUSB/EFI/BOOT/BOOTX64.EFI
+# sync
+# ls -l /run/media/space/EFIUSB/EFI/BOOT/
