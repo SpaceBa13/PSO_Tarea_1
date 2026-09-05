@@ -26,7 +26,7 @@ $(SRC_BOOT_BIN_LEGACY): $(SRC_BOOT_LEGACY)
 
 
 # Compilar aplicacion principal
-$(SRC_MAIN_BIN_LEGACY): $(SRC_MAIN_LEGACY) $(SRC_LEGACY)/video.asm $(SRC_LEGACY)/reloj.asm $(SRC_LEGACY)/cronometro.asm
+$(SRC_MAIN_BIN_LEGACY): $(SRC_MAIN_LEGACY) $(SRC_LEGACY)/video.asm $(SRC_LEGACY)/reloj.asm $(SRC_LEGACY)/cronometro.asm $(SRC_LEGACY)/alarma.asm 
 	mkdir -p $(BUILD_DIR)
 	nasm -I $(SRC_LEGACY)/ -f bin $(SRC_MAIN_LEGACY) -o $(SRC_MAIN_BIN_LEGACY)
 

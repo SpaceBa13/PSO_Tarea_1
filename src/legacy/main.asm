@@ -11,19 +11,35 @@ start_main:
     call mostrar_interfaz_reloj
 
     loop_programa:
-        call revisar_opciones
 
-        call actualizar_cronometro
+    call revisar_opciones
 
-        cmp byte [modo_actual], 1
-        je seguir
+    ; Siempre conocer la hora real
+    call leer_hora_sistema
 
-        call actualizar_reloj
+    ; Siempre comprobar la alarma
+    call revisar_alarma
 
-        
-        seguir:
+
+    ; Si la alarma esta mostrandose,
+    ; no redibujar encima
+    cmp byte [alarma_disparada], 1
+    je .esperar
+
+
+    ; El cronometro debe seguir actualizandose
+    ; aunque estemos viendo el reloj
+    call actualizar_cronometro
+
+
+    ; ¿Estamos viendo reloj?
+    cmp byte [modo_actual], 0
+    jne .esperar
+
+    call actualizar_reloj
+
+    .esperar:
         hlt
-
         jmp loop_programa
 
 fin:
@@ -44,6 +60,15 @@ revisar_opciones:
     cmp al, 'q'
     je fin
 
+    cmp al, 'c'
+    je .cancelar
+
+    cmp byte [alarma_disparada], 1
+    je .fin
+
+    cmp al, 'a'
+    je .configurar
+
     cmp byte [modo_actual], 1
     jne .comp_modo
 
@@ -54,6 +79,17 @@ revisar_opciones:
     jne .fin
 
     call cambiar_modo
+
+.configurar:
+    call configurar_alarma
+    call redibujar_interfaz_actual
+    ret
+
+
+.cancelar:
+    call cancelar_alarma
+    call redibujar_interfaz_actual
+    ret
 
 .fin:
     ret
@@ -80,5 +116,6 @@ modo_actual:
 %include "video.asm"
 %include "reloj.asm"
 %include "cronometro.asm"
+%include "alarma.asm"
 
-times 1024 - ($ - $$) db 0
+times 2048 - ($ - $$) db 0

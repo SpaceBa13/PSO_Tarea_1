@@ -123,6 +123,7 @@ mostrar_interfaz_reloj:
     mov si, opciones
     call imprimir_cadena
 
+    call mostrar_hora
     ret
 
 imprimir_numero:
@@ -186,4 +187,78 @@ mostrar_interfaz_cronometro:
     call mostrar_cronometro
 
     ret
+
+leer_digito:
+.esperar:
+    ; Esperar tecla
+    xor ah, ah
+    int 0x16
+
+    ; Validar que sea entre '0' y '9'
+    cmp al, '0'
+    jb .esperar
+
+    cmp al, '9'
+    ja .esperar
+
+    ; Guardar temporalmente el caracter
+    push bx
+    mov bl, al
+
+    ; Mostrar el digito en pantalla
+    mov ah, 0x0E
+    xor bh, bh
+    int 0x10
+
+    ; Convertir ASCII -> numero
+    mov al, bl
+    sub al, '0'
+
+    pop bx
+
+    ret
+
+mostrar_aviso_alarma:
+
+    ; Limpiar pantalla usando otro atributo
+    mov ah, 0x06
+    mov al, 0x00
+
+    mov bh, 0x4F       ; fondo distinto / texto brillante
+    mov cx, 0x0000
+    mov dx, 0x184F
+
+    int 0x10
+
+
+    ; Mostrar mensaje
+    mov dh, 10
+    mov dl, 32
+    call mover_cursor
+
+    mov si, msg_alarma
+    call imprimir_cadena
+
+
+    mov dh, 12
+    mov dl, 29
+    call mover_cursor
+
+    mov si, msg_cancelar_alarma
+    call imprimir_cadena
+
+    ret
+
+redibujar_interfaz_actual:
+
+    cmp byte [modo_actual], 0
+    je .reloj
+
+    call mostrar_interfaz_cronometro
+    ret
+
+.reloj:
+    call mostrar_interfaz_reloj
+    ret
+
 

@@ -31,7 +31,7 @@ mostrar_hora:
 
     ret
 
-actualizar_reloj:
+leer_hora_sistema:
     mov ah, 0x02 ; servicio de la interrupcion
     int 0x1a ; interrupcion para obtener la hora
 
@@ -39,9 +39,16 @@ actualizar_reloj:
     mov [hora_actual], ch
     mov [minuto_actual], cl
     mov [segundo_actual], dh
+    ret
 
-    cmp [segundo_anterior], dh
+
+actualizar_reloj:
+    mov al, [segundo_actual]
+
+    cmp al, [segundo_anterior]
     je .fin
+
+    mov [segundo_anterior], al
 
     call mostrar_hora
 
