@@ -37,10 +37,10 @@ run-uefi: uefi
 		-rtc base=localtime \
 		-drive format=raw,file=fat:rw:$(BUILD_DIR)/esp
 
-
 clean:
 	rm -rf $(BUILD_DIR)
 
+# Comandos para meter el UEFI en llave maya (solo funciona en una pc, debe modificar las rutas)
 # mkdir -p /run/media/space/EFIUSB/EFI/BOOT
 # cp build/esp/EFI/BOOT/BOOTX64.EFI /run/media/space/EFIUSB/EFI/BOOT/BOOTX64.EFI
 # sync
