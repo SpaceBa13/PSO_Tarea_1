@@ -1,37 +1,47 @@
 [BITS 64]
+
 default rel
 
 ; ==============================================================================
+
 ; EXPORTACIONES
+
 ; ==============================================================================
 
+; Funciones relacionadas con el reloj
 global get_time
 global update_clock_string
 global update_chrono_string
+
+; Cadenas de texto
 global ClockString
 global ChronoString
 
+; Variable del reloj
 global current_second
+
+; Variables del cronómetro
 global chrono_running
 global chrono_started
-
 global chrono_hour
 global chrono_minute
 global chrono_second
 
-
+; Funciones del cronómetro
 global start_chronometer
 global pause_chronometer
 global reset_chronometer
 global update_chronometer
 
-
-
+; Variables de la alarma
 global alarm_hour
 global alarm_minute
 global alarm_is_set
+
+; Cadena de texto de la alarma
 global AlarmString
 
+; Funciones de la alarma
 global configure_alarm_time
 global update_alarm_string
 global reset_alarm
@@ -39,20 +49,22 @@ global check_alarm
 global stop_alarm
 
 
-
-
-
 ; ==============================================================================
+
 ; VARIABLES EXTERNAS
+
 ; ==============================================================================
 
+; Interfaces de entrada y sistema UEFI
 extern SystemTable
-extern ConIn 
+extern ConIn
+
 
 ; ==============================================================================
+
 ; SECCIÓN BSS
-; ==============================================================================
 
+; ==============================================================================
 section .bss
 
     ; Buffer utilizado por EFI Runtime Services -> GetTime

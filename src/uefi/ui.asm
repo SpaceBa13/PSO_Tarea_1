@@ -24,6 +24,8 @@ extern ClockString
 extern ChronoString
 extern AlarmString
 
+extern alarm_flash_state
+
 
 
 ; ==============================================================================
@@ -87,11 +89,30 @@ section .data
 
     msg_alarm_on dw __utf16__(`  [ Alarma: CONFIGURADA  ( `), 0
 
-    msg_alarm_ring dw __utf16__(`  [ Alarma: SONANDO!!!   ( `), 0
-
     msg_alarm_input dw __utf16__(`  [ Alarma: CONFIGURANDO ( `), 0
 
     msg_alarm_end dw __utf16__(` ) ]\r\n\r\n`), 0
+
+
+    ; ==========================================================
+    ; PANTALLA DE ALARMA SONANDO
+    ; ==========================================================
+
+    msg_alarm_ringing_top dw \
+        __utf16__(`+-------------------------------------------------------+\r\n`), \
+        __utf16__(`|                                                       |\r\n`), \
+        __utf16__(`|                    !!! ALARMA !!!                     |\r\n`), \
+        __utf16__(`|                                                       |\r\n`), \
+        __utf16__(`|               LA ALARMA ESTA SONANDO                  |\r\n`), \
+        __utf16__(`|                                                       |\r\n`), \
+        __utf16__(`|                       `), 0
+
+    msg_alarm_ringing_bottom dw \
+        __utf16__(`                           |\r\n`), \
+        __utf16__(`|                                                       |\r\n`), \
+        __utf16__(`|                  [A] Apagar alarma                    |\r\n`), \
+        __utf16__(`|                                                       |\r\n`), \
+        __utf16__(`+-------------------------------------------------------+\r\n`), 0
 
 
     ; ==========================================================
@@ -183,6 +204,12 @@ render_ui:
 
     ; Limpiar pantalla
     call clear_screen
+
+    movzx ebx, byte [alarm_is_set]
+
+    cmp ebx, 2
+    je .alarm_ringing
+
 
     ; Seleccionar modo
     mov al, [current_mode]
@@ -276,6 +303,7 @@ render_ui:
     movzx ebx, byte [alarm_is_set]
 
 
+    ; Muestra el reloj siempre y cuando no se este configurando la alarma
     cmp ebx, 3
     je .skip_print_clock
 
@@ -325,9 +353,45 @@ render_ui:
 
 
 .alarm_ringing:
-    lea rcx, [msg_alarm_ring]
+
+    cmp byte [alarm_flash_state], 0
+    je .alarm_color_1
+
+    ; ----------------------------------------------------------
+    ; Color 2
+    ; ----------------------------------------------------------
+
+    mov rcx, 0x0C          ; rojo claro
+    call set_color
+    jmp .print_alarm_ringing
+
+
+.alarm_color_1:
+
+    ; ----------------------------------------------------------
+    ; Color 1
+    ; ----------------------------------------------------------
+
+    mov rcx, 0x0E          ; amarillo
+    call set_color
+
+
+.print_alarm_ringing:
+
+    lea rcx, [msg_alarm_ringing_top]
     call print_string
 
+    lea rcx, [AlarmString]
+    call print_string
+
+    lea rcx, [msg_alarm_ringing_bottom]
+    call print_string
+
+    ; Restaurar color normal
+    mov rcx, 0x07
+    call set_color
+
+    jmp .done
 
 .show_alarm_time:
     ; Mostrar HH:MM

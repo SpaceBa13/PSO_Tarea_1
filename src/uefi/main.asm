@@ -15,6 +15,8 @@ extern current_second
 
 global current_mode
 
+global alarm_flash_state
+
 extern print_string
 extern clear_screen
 extern render_ui
@@ -77,6 +79,8 @@ section .bss
     current_mode resb 1
 
     previous_second resb 1
+
+    alarm_flash_state resb 1
 
 
 ; ==============================================================================
@@ -165,6 +169,7 @@ main_loop:
     mov al, [current_second]
 
     cmp al, [previous_second]
+
     je .check_keyboard
 
     ; ----------------------------------------------------------
@@ -172,6 +177,15 @@ main_loop:
     ; ----------------------------------------------------------
 
     mov [previous_second], al
+
+    ; Cambiar estado del parpadeo
+    cmp byte [alarm_is_set], 2
+    jne .no_alarm_flash
+
+    xor byte [alarm_flash_state], 1
+
+    .no_alarm_flash:
+
 
     ; ----------------------------------------------------------
     ; Actualizar reloj
@@ -276,6 +290,23 @@ main_loop:
 
 .skip_chrono_controls:
 
+    ; Combrobar si la alarma esta sonando
+    cmp byte [alarm_is_set], 2
+    jne alarm_is_not_ringing
+
+    ; ==========================================================
+    ; ALARMA - Apagar alarma
+    ; ==========================================================
+
+    cmp ax, 'A'
+    je turn_off_alarm
+
+    cmp ax, 'a'
+    je turn_off_alarm
+
+
+    alarm_is_not_ringing:
+
     ; ==========================================================
     ; ALARMA
     ; ==========================================================
@@ -305,16 +336,6 @@ main_loop:
     cmp ax, 'c'
     je alarm_cancel
 
-
-    ; ==========================================================
-    ; ALARMA - Apagar alarma
-    ; ==========================================================
-
-    cmp ax, 'A'
-    je turn_off_alarm
-
-    cmp ax, 'a'
-    je turn_off_alarm
 
 
 .skip_alarm_controls:
