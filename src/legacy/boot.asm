@@ -42,20 +42,20 @@ start:
     call imprimir_cadena    ; vamos a la rutina
 
 esperar_enter:
-    xor ah, ah
-    int 0x16
+    xor ah, ah              ; servicio de la interrupcion
+    int 0x16                ; interrupcion de teclado 
 
-    cmp al, 13
-    jne esperar_enter
+    cmp al, 13              ; comparar si llego el enter
+    jne esperar_enter       ; si no seguir en loop
 
-    mov si, entrando
-    call imprimir_cadena
+    mov si, entrando        
+    call imprimir_cadena    ; print de la cadena entrando
 
     ; inentar pasar al programa principal
     xor ax, ax
     mov es, ax
 
-    mov bx, 0x8000
+    mov bx, 0x8000      ; donde se encuentra el programa principal
 
     mov ah, 0x02        ; funcion BIOS: leer sectores
     mov al, 0x04        ; cantidad: 4 sectores
@@ -64,9 +64,9 @@ esperar_enter:
     mov dh, 0x00        ; cabeza 0
     mov cl, 0x02        ; sector 2
 
-    mov dl, [boot_drive]
+    mov dl, [boot_drive] ; paamos otra vez a dl la info del inicio
 
-    int 0x13
+    int 0x13            ; interrupcion de disco
 
     jc fallo_disco
 

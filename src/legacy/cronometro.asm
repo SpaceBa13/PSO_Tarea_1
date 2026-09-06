@@ -54,8 +54,9 @@ actualizar_cronometro:
 
     ; paso un minuto?
     cmp byte [segundos_c], 60
-    jne .mostrar
+    jne .mostrar ; si no, mostramos directamente lo que hay
 
+    ;si ya paso un minuto, aumentamos mins y reiniciamos segs y luego mostramos
     inc byte [minutos_c]
     mov byte [segundos_c], 0
 

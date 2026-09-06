@@ -12,11 +12,11 @@ start_main:
 
     loop_programa:
 
-    call revisar_opciones ; Revisar teclado
+    call revisar_opciones   ; Revisar teclado
 
     call leer_hora_sistema  ; Mantener actualizada la hora real
 
-    call actualizar_cronometro
+    call actualizar_cronometro  ; actualiza el cronometro si esta activo
 
     ; Siempre comprobar la alarma
     call revisar_alarma
@@ -60,36 +60,37 @@ fin:
 ;================== rutinas =================
 
 revisar_opciones:
-    mov ah, 0x01
-    int 0x16
+    mov ah, 0x01 ; este servicio hace que el programa no se detenga esperando una tecla
+    int 0x16 ; interrupcion de teclado
 
-    jz .fin
+    jz .fin  ; si no llega nada salimos de la rutina
 
+    ; si hay algo volvemos a llamar a la int pero con servicio 0 para ahora si 'agarrar' cual tecla se oprimio
     xor ah, ah
     int 0x16
 
-    cmp al, 'q'
+    cmp al, 'q' ; si se oprimio q salimos deel programa
     je fin
 
-    cmp al, 'c'
+    cmp al, 'c' ; si se oprimio c se cancela la alarma
     je .cancelar
 
-    cmp byte [alarma_disparada], 1
+    cmp byte [alarma_disparada], 1  ; si la alarma esta activa ninguna opcion fuera de q y c es valida
     je .fin
 
-    cmp al, 'a'
+    cmp al, 'a' ; si es a llamamos a configurar la alarma
     je .configurar
 
-    cmp byte [modo_actual], 1
-    jne .comp_modo
+    cmp byte [modo_actual], 1 ; revisar s estamos en modo cronometro
+    jne .comp_modo ; si no saltamos de una a ver si tenemos que cambiar de modo
 
-    call revisar_ops_cronometro
+    call revisar_ops_cronometro ; como si estamos, vamos a revisar las opciones especiales del cronometro
 
 .comp_modo:
-    cmp al, 'm'
-    jne .fin
+    cmp al, 'm' ; revisar si se oprimio m
+    jne .fin ; si no, salimos de la rutina
 
-    call cambiar_modo
+    call cambiar_modo ; llamamos rutina que cambia de modo
 
     jmp .fin
 
@@ -108,10 +109,11 @@ revisar_opciones:
     ret
 
 cambiar_modo:
+    ; modo reloj = 0 y modo cronometro = 1
     xor byte [modo_actual], 1 ;cambiamos el modo 
 
     cmp byte [modo_actual], 0
-    je .interfaz_reloj
+    je .interfaz_reloj 
 
     call mostrar_interfaz_cronometro
     ret
