@@ -1,21 +1,56 @@
 # Directorios
-SRC_LEGACY = src/legacy/main.asm
 SRC_UEFI_BOOT = src/uefi/boot.asm
 SRC_UEFI_MAIN = src/uefi/main.asm
 SRC_UEFI_CLOCK = src/uefi/clock.asm
 SRC_UEFI_UI = src/uefi/ui.asm
+SRC_LEGACY = src/legacy
 BUILD_DIR = build
+BUILD_LEGACY = $(BUILD_DIR)/legacy
+
+# Archivos Legacy
+SRC_BOOT_LEGACY = $(SRC_LEGACY)/boot.asm
+SRC_MAIN_LEGACY = $(SRC_LEGACY)/main.asm
+
+SRC_BOOT_BIN_LEGACY = $(BUILD_LEGACY)/boot.bin
+SRC_MAIN_BIN_LEGACY = $(BUILD_LEGACY)/main.bin
+
+LEGACY_IMG = $(BUILD_LEGACY)/legacy.img
 
 # Regla por defecto: Compilar ambos
 all: legacy uefi
 
 # Compilación y ejecución Legacy
-legacy:
-	mkdir -p $(BUILD_DIR)
-	nasm -f bin $(SRC_LEGACY) -o $(BUILD_DIR)/legacy.bin
+legacy: $(LEGACY_IMG)
 
+# Compilar bootloader
+$(SRC_BOOT_BIN_LEGACY): $(SRC_BOOT_LEGACY)
+	mkdir -p $(BUILD_LEGACY)
+	nasm -f bin $(SRC_BOOT_LEGACY) -o $(SRC_BOOT_BIN_LEGACY)
+
+
+# Compilar aplicacion principal
+$(SRC_MAIN_BIN_LEGACY): \
+	$(SRC_MAIN_LEGACY) \
+	$(SRC_LEGACY)/video.asm \
+	$(SRC_LEGACY)/reloj.asm \
+	$(SRC_LEGACY)/cronometro.asm \
+	$(SRC_LEGACY)/alarma.asm
+
+	mkdir -p $(BUILD_LEGACY)
+	nasm -I $(SRC_LEGACY)/ -f bin $(SRC_MAIN_LEGACY) -o $(SRC_MAIN_BIN_LEGACY)
+
+
+# Crear imagen booteable
+$(LEGACY_IMG): $(SRC_BOOT_BIN_LEGACY) $(SRC_MAIN_BIN_LEGACY)
+	cat $(SRC_BOOT_BIN_LEGACY) $(SRC_MAIN_BIN_LEGACY) > $(LEGACY_IMG)
+
+
+# Ejecutar Legacy en QEMU
 run-legacy: legacy
-	qemu-system-x86_64 -drive format=raw,file=$(BUILD_DIR)/legacy.bin
+	qemu-system-x86_64 -drive format=raw,file=$(LEGACY_IMG)
+	
+	
+	
 
 # Compilación y ejecución UEFI
 uefi:
